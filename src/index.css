@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/* Base styles */
+:root {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+body {
+  background-color: #030712;
+  color: #e5e7eb;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #111827;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+/* Blinking cursor animation */
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 1s infinite;
+}
+
+/* Line clamp utility */
+.line-clamp-3 {
+  display: -webkit-box;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Terminal glow effect */
+.terminal-glow {
+  text-shadow: 0 0 10px currentColor;
+}
+
+/* Scanline effect (subtle) */
+.scanlines::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Selection styling */
+::selection {
+  background-color: #22c55e40;
+  color: #22c55e;
+}
+
+/* Focus styling */
+input:focus, textarea:focus, button:focus {
+  outline: none;
+}
+
+/* Placeholder styling */
+input::placeholder, textarea::placeholder {
+  color: #4b5563;
+  opacity: 1;
+}
+
+/* Custom font for monospace */
+.font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
