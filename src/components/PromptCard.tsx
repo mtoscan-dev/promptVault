@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { GitBranch, Clock, Trash2, Edit3 } from "lucide-react";
+import { GitBranch, Clock, Trash2, Edit3, Check } from "lucide-react";
 import { Prompt } from "@/types";
 import { TagBadge } from "@/components/TagBadge";
 
@@ -10,16 +11,82 @@ interface PromptCardProps {
 }
 
 export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
+  const [copied, setCopied] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const currentVersion = prompt.versions.find(
     (v) => v.id === prompt.currentVersionId,
   );
   const content = currentVersion?.content || "";
 
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
   return (
     <div
       className="group relative overflow-hidden bg-gray-900/80 border border-gray-700/50 rounded-lg p-3 hover:border-green-600/50 transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-green-900/20 active:translate-y-0"
-      onClick={() => onSelect(prompt)}
+      onClick={handleCopy}
     >
+      {/* Copied Overlay */}
+      <div
+        className={`absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300 ${
+          copied
+            ? "opacity-100 scale-100"
+            : "opacity-0 scale-95 pointer-events-none"
+        }`}
+      >
+        <div className="flex flex-col items-center gap-2">
+          <div className="bg-green-500 rounded-full p-2 shadow-lg shadow-green-500/20">
+            <Check className="text-black" size={20} />
+          </div>
+          <span className="text-green-400 font-mono font-bold text-sm tracking-widest uppercase">
+            Copied
+          </span>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Overlay */}
+      <div
+        className={`absolute inset-0 z-30 flex items-center justify-center bg-gray-950/90 backdrop-blur-md transition-all duration-300 ${
+          showDeleteConfirm
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-4 pointer-events-none"
+        }`}
+      >
+        <div className="flex flex-col items-center gap-4 p-4 w-full max-w-[200px]">
+          <div className="text-red-500 font-mono text-[10px] font-bold tracking-tighter uppercase mb-1 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-red-500 animate-pulse rounded-full" />
+            TER_PROMPT?
+          </div>
+          <div className="flex gap-2 w-full">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDeleteConfirm(false);
+              }}
+              className="flex-1 py-1 px-2 border border-gray-700 hover:bg-gray-800 text-gray-400 text-[10px] font-mono uppercase tracking-wider transition-colors rounded"
+            >
+              Abort
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(prompt.id);
+                setShowDeleteConfirm(false);
+              }}
+              className="flex-1 py-1 px-2 bg-red-950/30 border border-red-900/50 hover:bg-red-900/50 text-red-500 text-[10px] font-mono uppercase tracking-wider transition-all rounded shadow-lg shadow-red-900/20"
+            >
+              Exterminate
+            </button>
+          </div>
+        </div>
+      </div>
       {/* Scanline Effect */}
       <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 overflow-hidden">
         <div className="absolute inset-0 bg-linear-to-b from-transparent via-green-500/5 to-transparent h-[50%] w-full animate-scanline" />
@@ -50,7 +117,7 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onDelete(prompt.id);
+              setShowDeleteConfirm(true);
             }}
             className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded transition-colors"
             title="Delete"

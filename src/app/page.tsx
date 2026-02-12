@@ -11,6 +11,7 @@ import { Prompt, PromptVersion, Tag } from "@/types";
 import { initialPrompts } from "@/data/mock";
 import { classifyPrompt } from "@/utils/classification";
 import { TAG_COLORS } from "@/utils/styling";
+import { SystemErrorModal } from "@/components/SystemErrorModal";
 
 export default function Home() {
   const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts);
@@ -20,6 +21,10 @@ export default function Home() {
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isNewPrompt, setIsNewPrompt] = useState(false);
+  const [pasteContent, setPasteContent] = useState("");
+  const [systemError, setSystemError] = useState<{ message: string } | null>(
+    null,
+  );
 
   // Derive Tags
   useEffect(() => {
@@ -40,6 +45,39 @@ export default function Home() {
 
     setTags(tagList.sort((a, b) => b.count - a.count));
   }, [prompts]);
+
+  // Global Paste Listener
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      // Don't trigger if we are already in an input/textarea
+      if (
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA"
+      ) {
+        return;
+      }
+
+      const text = event.clipboardData?.getData("text");
+      if (text) {
+        setPasteContent(text);
+        setSelectedPrompt(null);
+        setIsNewPrompt(true);
+        setIsEditorOpen(true);
+      } else {
+        // Check if there's any file or non-text data
+        const items = event.clipboardData?.items;
+        if (items && items.length > 0) {
+          setSystemError({
+            message:
+              "DATA_TYPE_MISMATCH: The intercepted broadcast contains non-textual fragments. Only plaintext packets can be ingested into the vault.",
+          });
+        }
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
 
   // Search Logic
   const filteredPrompts = prompts.filter((prompt) => {
@@ -90,6 +128,7 @@ export default function Home() {
 
   const handleNewPrompt = useCallback(() => {
     setSelectedPrompt(null);
+    setPasteContent("");
     setIsNewPrompt(true);
     setIsEditorOpen(true);
   }, []);
@@ -295,9 +334,20 @@ export default function Home() {
       {isEditorOpen && (
         <PromptEditor
           prompt={isNewPrompt ? null : selectedPrompt}
-          onClose={() => setIsEditorOpen(false)}
+          initialContent={isNewPrompt ? pasteContent : undefined}
+          onClose={() => {
+            setIsEditorOpen(false);
+            setPasteContent("");
+          }}
           onSave={handleSave}
           onVersionSwitch={switchVersion}
+        />
+      )}
+
+      {systemError && (
+        <SystemErrorModal
+          message={systemError.message}
+          onClose={() => setSystemError(null)}
         />
       )}
     </div>
