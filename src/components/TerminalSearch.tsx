@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect, KeyboardEvent } from 'react';
-import { Tag } from '@/types';
-import { cn } from '@/utils/cn';
+import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { Tag } from "@/types";
+import { cn } from "@/utils/cn";
 
 interface TerminalSearchProps {
   tags: Tag[];
   selectedTags: string[];
+  placeholder?: string;
   onSearch: (query: string) => void;
   onTagSelect: (tag: string) => void;
   onTagRemove: (tag: string) => void;
@@ -13,11 +14,12 @@ interface TerminalSearchProps {
 export function TerminalSearch({
   tags,
   selectedTags,
+  placeholder,
   onSearch,
   onTagSelect,
   onTagRemove,
 }: TerminalSearchProps) {
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<Tag[]>([]);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -27,12 +29,14 @@ export function TerminalSearch({
   }, []);
 
   useEffect(() => {
-    const words = input.split(' ');
+    const words = input.split(" ");
     const lastWord = words[words.length - 1].toLowerCase();
-    
+
     if (lastWord.length > 0) {
       const matching = tags.filter(
-        tag => tag.name.toLowerCase().startsWith(lastWord) && !selectedTags.includes(tag.name)
+        (tag) =>
+          tag.name.toLowerCase().startsWith(lastWord) &&
+          !selectedTags.includes(tag.name),
       );
       setSuggestions(matching.slice(0, 5));
       setSelectedSuggestion(0);
@@ -42,25 +46,31 @@ export function TerminalSearch({
   }, [input, tags, selectedTags]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === ' ' && suggestions.length > 0) {
+    if (e.key === " " && suggestions.length > 0) {
       e.preventDefault();
       const selectedTag = suggestions[selectedSuggestion];
       if (selectedTag) {
         onTagSelect(selectedTag.name);
-        const words = input.split(' ');
+        const words = input.split(" ");
         words.pop();
-        setInput(words.join(' ') + (words.length > 0 ? ' ' : ''));
+        setInput(words.join(" ") + (words.length > 0 ? " " : ""));
         setSuggestions([]);
       }
-    } else if (e.key === 'ArrowDown' && suggestions.length > 0) {
+    } else if (e.key === "ArrowDown" && suggestions.length > 0) {
       e.preventDefault();
-      setSelectedSuggestion(prev => (prev + 1) % suggestions.length);
-    } else if (e.key === 'ArrowUp' && suggestions.length > 0) {
+      setSelectedSuggestion((prev) => (prev + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp" && suggestions.length > 0) {
       e.preventDefault();
-      setSelectedSuggestion(prev => (prev - 1 + suggestions.length) % suggestions.length);
-    } else if (e.key === 'Backspace' && input === '' && selectedTags.length > 0) {
+      setSelectedSuggestion(
+        (prev) => (prev - 1 + suggestions.length) % suggestions.length,
+      );
+    } else if (
+      e.key === "Backspace" &&
+      input === "" &&
+      selectedTags.length > 0
+    ) {
       onTagRemove(selectedTags[selectedTags.length - 1]);
-    } else if (e.key === 'Enter') {
+    } else if (e.key === "Enter") {
       e.preventDefault();
       onSearch(input);
     }
@@ -82,7 +92,7 @@ export function TerminalSearch({
 
         {/* Selected tags */}
         <div className="flex items-center gap-1 flex-wrap">
-          {selectedTags.map(tag => (
+          {selectedTags.map((tag) => (
             <span
               key={tag}
               onClick={() => onTagRemove(tag)}
@@ -101,18 +111,24 @@ export function TerminalSearch({
             value={input}
             onChange={(e) => handleInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="w-full bg-transparent text-green-400 outline-none font-mono text-sm caret-transparent"
-            placeholder=""
+            className="w-full bg-transparent text-green-400 outline-none font-mono text-sm caret-transparent placeholder:text-gray-700"
+            placeholder={placeholder}
             autoComplete="off"
             spellCheck={false}
           />
-          {/* Custom blinking cursor */}
-          <span
-            className="absolute top-0 text-green-400 pointer-events-none animate-blink"
-            style={{ left: `${input.length * 0.6}em` }}
-          >
-            ▋
-          </span>
+          {/* Custom blinking cursor - only show when typing or if there is content */}
+          {(input.length > 0 ||
+            inputRef.current === document.activeElement) && (
+            <span
+              className={cn(
+                "absolute top-0 text-green-400 pointer-events-none animate-blink",
+                input.length === 0 && "opacity-50",
+              )}
+              style={{ left: `${input.length * 0.6}em` }}
+            >
+              ▋
+            </span>
+          )}
         </div>
       </div>
 
@@ -123,16 +139,16 @@ export function TerminalSearch({
             <div
               key={tag.name}
               className={cn(
-                'px-3 py-1 text-sm font-mono cursor-pointer flex items-center justify-between gap-4',
+                "px-3 py-1 text-sm font-mono cursor-pointer flex items-center justify-between gap-4",
                 index === selectedSuggestion
-                  ? 'bg-green-900/50 text-green-300'
-                  : 'text-gray-400 hover:bg-gray-800'
+                  ? "bg-green-900/50 text-green-300"
+                  : "text-gray-400 hover:bg-gray-800",
               )}
               onClick={() => {
                 onTagSelect(tag.name);
-                const words = input.split(' ');
+                const words = input.split(" ");
                 words.pop();
-                setInput(words.join(' ') + (words.length > 0 ? ' ' : ''));
+                setInput(words.join(" ") + (words.length > 0 ? " " : ""));
                 setSuggestions([]);
                 inputRef.current?.focus();
               }}

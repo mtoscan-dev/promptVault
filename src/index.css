@@ -1,15 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 /* Base styles */
 :root {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
 }
 
 body {
   background-color: #030712;
   color: #e5e7eb;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
 }
 
 /* Scrollbar styling */
@@ -33,10 +33,12 @@ body {
 
 /* Blinking cursor animation */
 @keyframes blink {
-  0%, 50% {
+  0%,
+  50% {
     opacity: 1;
   }
-  51%, 100% {
+  51%,
+  100% {
     opacity: 0;
   }
 }
@@ -46,10 +48,10 @@ body {
 }
 
 /* Line clamp utility */
-.line-clamp-3 {
+.line-clamp-2 {
   display: -webkit-box;
-  line-clamp: 3;
-  -webkit-line-clamp: 3;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -61,7 +63,7 @@ body {
 
 /* Scanline effect (subtle) */
 .scanlines::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -85,17 +87,20 @@ body {
 }
 
 /* Focus styling */
-input:focus, textarea:focus, button:focus {
+input:focus,
+textarea:focus,
+button:focus {
   outline: none;
 }
 
 /* Placeholder styling */
-input::placeholder, textarea::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: #4b5563;
   opacity: 1;
 }
 
 /* Custom font for monospace */
 .font-mono {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
 }

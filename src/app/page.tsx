@@ -186,7 +186,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-950 text-gray-100 font-mono flex flex-col">
       {/* Header */}
       <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="max-w-7xl mx-auto px-4 py-1.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 text-green-400">
@@ -207,9 +207,16 @@ export default function Home() {
                   versions
                 </span>
               </div>
+              <div className="h-4 w-px bg-gray-800" />
+              <div className="text-sm text-gray-500">
+                <span className="text-green-400 font-bold">
+                  {filteredPrompts.length}
+                </span>{" "}
+                found
+              </div>
               <button
                 onClick={handleNewPrompt}
-                className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded text-sm transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded text-sm transition-colors cursor-pointer ml-2"
               >
                 <Plus size={16} />
                 New Prompt
@@ -221,28 +228,10 @@ export default function Home() {
 
       {/* Main content */}
       <main className="flex-1 overflow-auto">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          {/* Results header */}
-          <div className="mb-4 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              <span className="text-green-400">{filteredPrompts.length}</span>{" "}
-              prompt{filteredPrompts.length !== 1 ? "s" : ""} found
-              {selectedTags.length > 0 && (
-                <span>
-                  {" "}
-                  • filtered by{" "}
-                  <span className="text-purple-400">
-                    {selectedTags.length}
-                  </span>{" "}
-                  tag{selectedTags.length !== 1 ? "s" : ""}
-                </span>
-              )}
-            </div>
-          </div>
-
+        <div className="max-w-7xl mx-auto px-4 py-2">
           {/* Prompts grid */}
           {filteredPrompts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredPrompts.map((prompt) => (
                 <PromptCard
                   key={prompt.id}
@@ -277,12 +266,10 @@ export default function Home() {
 
       {/* Footer with terminal search */}
       <footer className="border-t border-gray-800 bg-gray-900/80 backdrop-blur-sm sticky bottom-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
+        <div className="max-w-7xl mx-auto px-4 py-1.5 space-y-1.5">
           {/* Row 1: Tags */}
           <div className="flex items-center gap-2 overflow-hidden">
-            <span className="text-gray-600 text-xs flex-shrink-0">
-              ETIQUETAS:
-            </span>
+            <span className="text-gray-600 text-xs shrink-0">ETIQUETAS:</span>
             <TagCloud
               tags={tags}
               selectedTags={selectedTags}
@@ -291,25 +278,15 @@ export default function Home() {
           </div>
 
           {/* Row 2: Terminal Search */}
-          <div className="bg-black/50 border border-gray-700 rounded px-3 py-2">
+          <div className="bg-black/50 border border-gray-700 rounded px-3 py-1.5">
             <TerminalSearch
               tags={tags}
               selectedTags={selectedTags}
+              placeholder="Escribe para buscar... [ESPACIO] para etiqueta • [ENTER] para filtrar"
               onSearch={handleSearch}
               onTagSelect={handleTagSelect}
               onTagRemove={handleTagRemove}
             />
-          </div>
-
-          {/* Help text */}
-          <div className="text-xs text-gray-600 flex items-center flex-wrap gap-y-1 gap-x-4">
-            <span>Type to search</span>
-            <span className="text-gray-700">•</span>
-            <span>Start typing a tag name for suggestions</span>
-            <span className="text-gray-700">•</span>
-            <span>[SPACE] to select tag</span>
-            <span className="text-gray-700">•</span>
-            <span>[BACKSPACE] to remove last tag</span>
           </div>
         </div>
       </footer>

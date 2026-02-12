@@ -1,7 +1,7 @@
-import { formatDistanceToNow } from 'date-fns';
-import { GitBranch, Clock, Trash2, Edit3 } from 'lucide-react';
-import { Prompt } from '@/types';
-import { TagBadge } from '@/components/TagBadge';
+import { formatDistanceToNow } from "date-fns";
+import { GitBranch, Clock, Trash2, Edit3 } from "lucide-react";
+import { Prompt } from "@/types";
+import { TagBadge } from "@/components/TagBadge";
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -10,22 +10,26 @@ interface PromptCardProps {
 }
 
 export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
-  const currentVersion = prompt.versions.find(v => v.id === prompt.currentVersionId);
-  const content = currentVersion?.content || '';
-  
+  const currentVersion = prompt.versions.find(
+    (v) => v.id === prompt.currentVersionId,
+  );
+  const content = currentVersion?.content || "";
+
   return (
     <div
-      className="group bg-gray-900/80 border border-gray-700/50 rounded-lg p-4 hover:border-green-600/50 transition-all cursor-pointer hover:shadow-lg hover:shadow-green-900/20"
+      className="group bg-gray-900/80 border border-gray-700/50 rounded-lg p-3 hover:border-green-600/50 transition-all cursor-pointer hover:shadow-lg hover:shadow-green-900/20"
       onClick={() => onSelect(prompt)}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1">
-          <h3 className="text-green-400 font-mono font-bold text-lg flex items-center gap-2">
+          <h3 className="text-green-400 font-mono font-bold text-base flex items-center gap-2">
             <span className="text-gray-500">$</span>
             {prompt.title}
           </h3>
-          <p className="text-gray-500 text-sm font-mono mt-1"># {prompt.description}</p>
+          <p className="text-gray-500 text-[10px] font-mono leading-tight">
+            # {prompt.description}
+          </p>
         </div>
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
@@ -52,15 +56,15 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
       </div>
 
       {/* Content preview */}
-      <div className="bg-black/40 rounded p-3 mb-3 border border-gray-800">
-        <pre className="text-gray-300 text-sm font-mono whitespace-pre-wrap line-clamp-3">
+      <div className="bg-black/40 rounded p-2 mb-2 border border-gray-800">
+        <pre className="text-gray-300 text-xs font-mono whitespace-pre-wrap line-clamp-2">
           {content}
         </pre>
       </div>
 
       {/* Tags */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {prompt.tags.map(tag => (
+      <div className="flex flex-wrap gap-1 mb-2">
+        {prompt.tags.map((tag) => (
           <TagBadge key={tag} name={tag} />
         ))}
       </div>
@@ -69,8 +73,7 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
       <div className="flex items-center justify-between text-xs text-gray-600 font-mono">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1">
-            <GitBranch size={12} />
-            v{prompt.versions.length}
+            <GitBranch size={12} />v{prompt.versions.length}
           </span>
           <span className="flex items-center gap-1" suppressHydrationWarning>
             <Clock size={12} />
