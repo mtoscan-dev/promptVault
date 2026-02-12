@@ -244,25 +244,37 @@ export default function Home() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <Database size={14} />
-                <span>{tCommon("prompts", { count: prompts.length })}</span>
+                <span>
+                  {tCommon.rich("prompts", {
+                    count: prompts.length,
+                    b: (chunks) => (
+                      <span className="text-gray-400 font-bold">{chunks}</span>
+                    ),
+                  })}
+                </span>
               </div>
               <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <GitBranch size={14} />
                 <span>
-                  {tCommon("versions", {
+                  {tCommon.rich("versions", {
                     count: prompts.reduce(
                       (acc, p) => acc + p.versions.length,
                       0,
+                    ),
+                    b: (chunks) => (
+                      <span className="text-gray-400 font-bold">{chunks}</span>
                     ),
                   })}
                 </span>
               </div>
               <div className="h-4 w-px bg-gray-800" />
               <div className="text-sm text-gray-500">
-                <span className="text-green-400 font-bold">
-                  {filteredPrompts.length}
-                </span>{" "}
-                {tCommon("found", { count: filteredPrompts.length })}
+                {tCommon.rich("found", {
+                  count: filteredPrompts.length,
+                  b: (chunks) => (
+                    <span className="text-green-400 font-bold">{chunks}</span>
+                  ),
+                })}
               </div>
               <div className="h-4 w-px bg-gray-800" />
               <LocaleSwitcher />

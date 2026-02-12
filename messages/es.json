@@ -2,9 +2,9 @@
   "Common": {
     "title": "PromptVault",
     "version": "v2.0.0",
-    "prompts": "{count} prompts",
-    "versions": "{count} versiones",
-    "found": "{count} encontrados",
+    "prompts": "<b>{count}</b> prompts",
+    "versions": "<b>{count}</b> versiones",
+    "found": "<b>{count}</b> encontrados",
     "newPrompt": "Nuevo Prompt",
     "tags": "ETIQUETAS",
     "searchPlaceholder": "Escribe para buscar... [ESPACIO] para etiqueta • [ENTER] para filtrar"

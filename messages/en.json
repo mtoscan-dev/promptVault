@@ -2,9 +2,9 @@
   "Common": {
     "title": "PromptVault",
     "version": "v2.0.0",
-    "prompts": "{count} prompts",
-    "versions": "{count} versions",
-    "found": "{count} found",
+    "prompts": "<b>{count}</b> prompts",
+    "versions": "<b>{count}</b> versions",
+    "found": "<b>{count}</b> found",
     "newPrompt": "New Prompt",
     "tags": "TAGS",
     "searchPlaceholder": "Type to search... [SPACE] for tag • [ENTER] to filter"
