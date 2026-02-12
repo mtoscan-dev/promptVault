@@ -17,13 +17,18 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
 
   return (
     <div
-      className="group bg-gray-900/80 border border-gray-700/50 rounded-lg p-3 hover:border-green-600/50 transition-all cursor-pointer hover:shadow-lg hover:shadow-green-900/20"
+      className="group relative overflow-hidden bg-gray-900/80 border border-gray-700/50 rounded-lg p-3 hover:border-green-600/50 transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-green-900/20 active:translate-y-0"
       onClick={() => onSelect(prompt)}
     >
+      {/* Scanline Effect */}
+      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 overflow-hidden">
+        <div className="absolute inset-0 bg-linear-to-b from-transparent via-green-500/5 to-transparent h-[50%] w-full animate-scanline" />
+      </div>
+
       {/* Header */}
-      <div className="flex items-start justify-between gap-2 mb-2">
+      <div className="relative flex items-start justify-between gap-2 mb-2">
         <div className="flex-1">
-          <h3 className="text-green-400 font-mono font-bold text-base flex items-center gap-2">
+          <h3 className="text-green-400 font-mono font-bold text-base flex items-center gap-2 group-hover:text-green-300 transition-colors">
             <span className="text-gray-500">$</span>
             {prompt.title}
           </h3>
@@ -31,7 +36,7 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
             # {prompt.description}
           </p>
         </div>
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
           <button
             onClick={(e) => {
               e.stopPropagation();

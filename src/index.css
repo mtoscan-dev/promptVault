@@ -104,3 +104,24 @@ textarea::placeholder {
 .font-mono {
   font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
 }
+/* Scanline animation */
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.animate-scanline {
+  animation: scanline 4s linear infinite;
+}
+
+/* Digital Glow */
+.hover-glow:hover {
+  box-shadow:
+    0 0 15px rgba(34, 197, 94, 0.2),
+    0 0 30px rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.4);
+}
