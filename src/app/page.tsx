@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect } from 'react';
-import { Plus, Terminal, Database, GitBranch } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
-import { TerminalSearch } from '@/components/TerminalSearch';
-import { TagCloud } from '@/components/TagCloud';
-import { PromptCard } from '@/components/PromptCard';
-import { PromptEditor } from '@/components/PromptEditor';
-import { Prompt, PromptVersion, Tag } from '@/types';
-import { initialPrompts } from '@/data/mock';
-import { classifyPrompt } from '@/utils/classification';
-import { TAG_COLORS } from '@/utils/styling';
+import { useState, useCallback, useEffect } from "react";
+import { Plus, Terminal, Database, GitBranch } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
+import { TerminalSearch } from "@/components/TerminalSearch";
+import { TagCloud } from "@/components/TagCloud";
+import { PromptCard } from "@/components/PromptCard";
+import { PromptEditor } from "@/components/PromptEditor";
+import { Prompt, PromptVersion, Tag } from "@/types";
+import { initialPrompts } from "@/data/mock";
+import { classifyPrompt } from "@/utils/classification";
+import { TAG_COLORS } from "@/utils/styling";
 
 export default function Home() {
   const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts);
   const [tags, setTags] = useState<Tag[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -24,33 +24,37 @@ export default function Home() {
   // Derive Tags
   useEffect(() => {
     const tagMap = new Map<string, number>();
-    prompts.forEach(prompt => {
-      prompt.tags.forEach(tag => {
+    prompts.forEach((prompt) => {
+      prompt.tags.forEach((tag) => {
         tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
       });
     });
 
-    const tagList: Tag[] = Array.from(tagMap.entries()).map(([name, count]) => ({
-      name,
-      color: TAG_COLORS[name] || TAG_COLORS.default,
-      count,
-    }));
+    const tagList: Tag[] = Array.from(tagMap.entries()).map(
+      ([name, count]) => ({
+        name,
+        color: TAG_COLORS[name] || TAG_COLORS.default,
+        count,
+      }),
+    );
 
     setTags(tagList.sort((a, b) => b.count - a.count));
   }, [prompts]);
 
   // Search Logic
-  const filteredPrompts = prompts.filter(prompt => {
+  const filteredPrompts = prompts.filter((prompt) => {
     if (selectedTags.length > 0) {
-      const hasAllTags = selectedTags.every(tag => prompt.tags.includes(tag));
+      const hasAllTags = selectedTags.every((tag) => prompt.tags.includes(tag));
       if (!hasAllTags) return false;
     }
 
     const lowerQuery = searchQuery.toLowerCase().trim();
     if (!lowerQuery) return true;
 
-    const currentVersion = prompt.versions.find(v => v.id === prompt.currentVersionId);
-    const content = currentVersion?.content || '';
+    const currentVersion = prompt.versions.find(
+      (v) => v.id === prompt.currentVersionId,
+    );
+    const content = currentVersion?.content || "";
 
     return (
       prompt.title.toLowerCase().includes(lowerQuery) ||
@@ -65,18 +69,16 @@ export default function Home() {
   }, []);
 
   const handleTagSelect = useCallback((tag: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tag) ? prev : [...prev, tag]
-    );
+    setSelectedTags((prev) => (prev.includes(tag) ? prev : [...prev, tag]));
   }, []);
 
   const handleTagRemove = useCallback((tag: string) => {
-    setSelectedTags(prev => prev.filter(t => t !== tag));
+    setSelectedTags((prev) => prev.filter((t) => t !== tag));
   }, []);
 
   const handleTagCloudClick = useCallback((tag: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   }, []);
 
@@ -92,72 +94,92 @@ export default function Home() {
     setIsEditorOpen(true);
   }, []);
 
-  const handleSave = useCallback((id: string | null, content: string, title: string, description: string) => {
-    if (id) {
-       // Update existing
-       setPrompts(prev => prev.map(prompt => {
-        if (prompt.id !== id) return prompt;
-        
-        const newVersionId = uuidv4();
-        const newVersion: PromptVersion = {
-          id: newVersionId,
-          content,
-          createdAt: new Date(),
-          versionNumber: prompt.versions.length + 1,
-        };
-        
-        const autoTags = classifyPrompt(content + ' ' + (title || prompt.title) + ' ' + (description || prompt.description));
-        
-        return {
-          ...prompt,
-          title: title || prompt.title,
-          description: description || prompt.description,
+  const handleSave = useCallback(
+    (
+      id: string | null,
+      content: string,
+      title: string,
+      description: string,
+    ) => {
+      if (id) {
+        // Update existing
+        setPrompts((prev) =>
+          prev.map((prompt) => {
+            if (prompt.id !== id) return prompt;
+
+            const newVersionId = uuidv4();
+            const newVersion: PromptVersion = {
+              id: newVersionId,
+              content,
+              createdAt: new Date(),
+              versionNumber: prompt.versions.length + 1,
+            };
+
+            const autoTags = classifyPrompt(
+              content +
+                " " +
+                (title || prompt.title) +
+                " " +
+                (description || prompt.description),
+            );
+
+            return {
+              ...prompt,
+              title: title || prompt.title,
+              description: description || prompt.description,
+              tags: autoTags,
+              versions: [...prompt.versions, newVersion],
+              currentVersionId: newVersionId,
+              updatedAt: new Date(),
+            };
+          }),
+        );
+      } else {
+        // Create new
+        const versionId = uuidv4();
+        const autoTags = classifyPrompt(
+          content + " " + title + " " + description,
+        );
+
+        const newPrompt: Prompt = {
+          id: uuidv4(),
+          title,
+          description,
           tags: autoTags,
-          versions: [...prompt.versions, newVersion],
-          currentVersionId: newVersionId,
+          versions: [
+            {
+              id: versionId,
+              content,
+              createdAt: new Date(),
+              versionNumber: 1,
+            },
+          ],
+          currentVersionId: versionId,
+          createdAt: new Date(),
           updatedAt: new Date(),
         };
-      }));
-    } else {
-      // Create new
-      const versionId = uuidv4();
-      const autoTags = classifyPrompt(content + ' ' + title + ' ' + description);
-
-      const newPrompt: Prompt = {
-        id: uuidv4(),
-        title,
-        description,
-        tags: autoTags,
-        versions: [
-          {
-            id: versionId,
-            content,
-            createdAt: new Date(),
-            versionNumber: 1,
-          },
-        ],
-        currentVersionId: versionId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setPrompts(prev => [newPrompt, ...prev]);
-    }
-  }, []);
+        setPrompts((prev) => [newPrompt, ...prev]);
+      }
+    },
+    [],
+  );
 
   const handleDelete = useCallback((id: string) => {
-    if (confirm('Are you sure you want to delete this prompt?')) {
-      setPrompts(prev => prev.filter(p => p.id !== id));
+    if (confirm("Are you sure you want to delete this prompt?")) {
+      setPrompts((prev) => prev.filter((p) => p.id !== id));
     }
   }, []);
 
   const switchVersion = useCallback((promptId: string, versionId: string) => {
-    setPrompts(prev => prev.map(prompt => {
-      if (prompt.id !== promptId) return prompt;
-      return {
-        ...prompt,
-        currentVersionId: versionId,
-      };
-    }));
+    setPrompts((prev) =>
+      prev.map((prompt) => {
+        if (prompt.id !== promptId) return prompt;
+        return {
+          ...prompt,
+          currentVersionId: versionId,
+        };
+      }),
+    );
   }, []);
 
   return (
@@ -180,7 +202,10 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <GitBranch size={14} />
-                <span>{prompts.reduce((acc, p) => acc + p.versions.length, 0)} versions</span>
+                <span>
+                  {prompts.reduce((acc, p) => acc + p.versions.length, 0)}{" "}
+                  versions
+                </span>
               </div>
               <button
                 onClick={handleNewPrompt}
@@ -200,9 +225,17 @@ export default function Home() {
           {/* Results header */}
           <div className="mb-4 flex items-center justify-between">
             <div className="text-sm text-gray-500">
-              <span className="text-green-400">{filteredPrompts.length}</span> prompt{filteredPrompts.length !== 1 ? 's' : ''} found
+              <span className="text-green-400">{filteredPrompts.length}</span>{" "}
+              prompt{filteredPrompts.length !== 1 ? "s" : ""} found
               {selectedTags.length > 0 && (
-                <span> • filtered by <span className="text-purple-400">{selectedTags.length}</span> tag{selectedTags.length !== 1 ? 's' : ''}</span>
+                <span>
+                  {" "}
+                  • filtered by{" "}
+                  <span className="text-purple-400">
+                    {selectedTags.length}
+                  </span>{" "}
+                  tag{selectedTags.length !== 1 ? "s" : ""}
+                </span>
               )}
             </div>
           </div>
@@ -210,7 +243,7 @@ export default function Home() {
           {/* Prompts grid */}
           {filteredPrompts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredPrompts.map(prompt => (
+              {filteredPrompts.map((prompt) => (
                 <PromptCard
                   key={prompt.id}
                   prompt={prompt}
@@ -225,9 +258,8 @@ export default function Home() {
               <p className="text-lg mb-2">No prompts found</p>
               <p className="text-sm">
                 {searchQuery || selectedTags.length > 0
-                  ? 'Try adjusting your search or filters'
-                  : 'Create your first prompt to get started'
-                }
+                  ? "Try adjusting your search or filters"
+                  : "Create your first prompt to get started"}
               </p>
               {prompts.length === 0 && (
                 <button
@@ -245,37 +277,32 @@ export default function Home() {
 
       {/* Footer with terminal search */}
       <footer className="border-t border-gray-800 bg-gray-900/80 backdrop-blur-sm sticky bottom-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center gap-6">
-            {/* Search bar - limited width like a menu */}
-            <div className="w-80 flex-shrink-0 bg-black/50 border border-gray-700 rounded px-3 py-2">
-              <TerminalSearch
-                tags={tags}
-                selectedTags={selectedTags}
-                onSearch={handleSearch}
-                onTagSelect={handleTagSelect}
-                onTagRemove={handleTagRemove}
-              />
-            </div>
+        <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
+          {/* Row 1: Tags */}
+          <div className="flex items-center gap-2 overflow-hidden">
+            <span className="text-gray-600 text-xs flex-shrink-0">
+              ETIQUETAS:
+            </span>
+            <TagCloud
+              tags={tags}
+              selectedTags={selectedTags}
+              onTagClick={handleTagCloudClick}
+            />
+          </div>
 
-            {/* Divider */}
-            <div className="h-8 w-px bg-gray-700 flex-shrink-0" />
-
-            {/* Tags section */}
-            <div className="flex-1 overflow-hidden">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600 text-xs flex-shrink-0">TAGS:</span>
-                <TagCloud
-                  tags={tags}
-                  selectedTags={selectedTags}
-                  onTagClick={handleTagCloudClick}
-                />
-              </div>
-            </div>
+          {/* Row 2: Terminal Search */}
+          <div className="bg-black/50 border border-gray-700 rounded px-3 py-2">
+            <TerminalSearch
+              tags={tags}
+              selectedTags={selectedTags}
+              onSearch={handleSearch}
+              onTagSelect={handleTagSelect}
+              onTagRemove={handleTagRemove}
+            />
           </div>
 
           {/* Help text */}
-          <div className="mt-2 text-xs text-gray-600 flex items-center gap-4">
+          <div className="text-xs text-gray-600 flex items-center flex-wrap gap-y-1 gap-x-4">
             <span>Type to search</span>
             <span className="text-gray-700">•</span>
             <span>Start typing a tag name for suggestions</span>
