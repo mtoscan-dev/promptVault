@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { X, Save, GitBranch, Clock, ChevronDown, Plus } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
+import { es, enUS } from "date-fns/locale";
 import { Prompt, PromptVersion } from "@/types";
 import { cn } from "@/utils/cn";
 
@@ -24,6 +26,10 @@ export function PromptEditor({
   onSave,
   onVersionSwitch,
 }: PromptEditorProps) {
+  const t = useTranslations("Editor");
+  const locale = useLocale();
+  const dateLocale = locale === "es" ? es : enUS;
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
@@ -88,15 +94,16 @@ export function PromptEditor({
                   onClick={() => setShowVersions(!showVersions)}
                   className="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded text-sm font-mono text-gray-300 hover:bg-gray-700 transition-colors"
                 >
-                  <GitBranch size={14} className="text-purple-400" />v
+                  <GitBranch size={14} className="text-purple-400" />
+                  {t("v")}
                   {selectedVersion?.versionNumber || prompt.versions.length}
                   <ChevronDown size={14} />
                 </button>
 
                 {showVersions && (
                   <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-700 rounded shadow-lg z-10 min-w-[250px]">
-                    <div className="p-2 border-b border-gray-700 text-xs text-gray-500 font-mono">
-                      VERSION HISTORY
+                    <div className="p-2 border-b border-gray-700 text-xs text-gray-500 font-mono text-uppercase">
+                      {t("versionHistory")}
                     </div>
                     {prompt.versions
                       .slice()
@@ -118,7 +125,9 @@ export function PromptEditor({
                           </span>
                           <span className="text-xs text-gray-500 flex items-center gap-1">
                             <Clock size={10} />
-                            {format(version.createdAt, "MMM d, yyyy")}
+                            {format(version.createdAt, "MMM d, yyyy", {
+                              locale: dateLocale,
+                            })}
                           </span>
                         </button>
                       ))}
@@ -139,41 +148,41 @@ export function PromptEditor({
         <div className="flex-1 overflow-auto p-4 space-y-4">
           {/* Title */}
           <div>
-            <label className="block text-xs text-gray-500 font-mono mb-1">
-              TITLE
+            <label className="block text-xs text-gray-500 font-mono mb-1 uppercase">
+              {t("promptTitle")}
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter prompt title..."
+              placeholder="..."
               className="w-full bg-black/50 border border-gray-700 rounded px-3 py-2 text-green-400 font-mono focus:outline-none focus:border-green-600 transition-colors"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-xs text-gray-500 font-mono mb-1">
-              DESCRIPTION
+            <label className="block text-xs text-gray-500 font-mono mb-1 uppercase">
+              {t("description")}
             </label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description..."
+              placeholder="..."
               className="w-full bg-black/50 border border-gray-700 rounded px-3 py-2 text-gray-300 font-mono text-sm focus:outline-none focus:border-green-600 transition-colors"
             />
           </div>
 
           {/* Content */}
           <div className="flex-1">
-            <label className="block text-xs text-gray-500 font-mono mb-1">
-              PROMPT CONTENT
+            <label className="block text-xs text-gray-500 font-mono mb-1 uppercase">
+              {t("content")}
             </label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Enter your prompt here..."
+              placeholder="..."
               rows={12}
               className="w-full bg-black/50 border border-gray-700 rounded px-3 py-2 text-gray-200 font-mono text-sm focus:outline-none focus:border-green-600 transition-colors resize-none"
             />
@@ -181,8 +190,7 @@ export function PromptEditor({
 
           {/* Info about auto-tagging */}
           <div className="bg-gray-800/50 rounded p-3 text-xs text-gray-500 font-mono">
-            <span className="text-purple-400">ℹ</span> Tags will be
-            automatically generated based on content keywords
+            <span className="text-purple-400">ℹ</span> {t("tags")}
           </div>
         </div>
 
@@ -190,7 +198,7 @@ export function PromptEditor({
         <div className="flex items-center justify-between p-4 border-t border-gray-800">
           <div className="text-xs text-gray-600 font-mono">
             {hasChanges && (
-              <span className="text-yellow-500">● Unsaved changes</span>
+              <span className="text-yellow-500">● {t("save")}?</span>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -198,7 +206,7 @@ export function PromptEditor({
               onClick={onClose}
               className="px-4 py-2 text-sm font-mono text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
             >
-              Cancel
+              {t("cancel")}
             </button>
             <button
               onClick={handleSave}
@@ -211,7 +219,7 @@ export function PromptEditor({
               )}
             >
               {isNewPrompt ? <Plus size={16} /> : <Save size={16} />}
-              {isNewPrompt ? "Create Prompt" : "Save New Version"}
+              {isNewPrompt ? t("newTitle") : t("save")}
             </button>
           </div>
         </div>

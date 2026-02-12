@@ -1,0 +1,48 @@
+{
+  "Common": {
+    "title": "PromptVault",
+    "version": "v2.0.0",
+    "prompts": "{count} prompts",
+    "versions": "{count} versions",
+    "found": "{count} found",
+    "newPrompt": "New Prompt",
+    "tags": "TAGS",
+    "searchPlaceholder": "Type to search... [SPACE] for tag • [ENTER] to filter"
+  },
+  "Terminal": {
+    "selectHint": "[SPACE] to select • [↑↓] to navigate"
+  },
+  "Editor": {
+    "title": "Edit Prompt",
+    "newTitle": "New Prompt",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this prompt?",
+    "promptTitle": "Title",
+    "description": "Description",
+    "content": "Prompt Content",
+    "tags": "Tags (Auto-generated)",
+    "versionHistory": "Version History",
+    "v": "v"
+  },
+  "PromptCard": {
+    "copied": "Copied",
+    "deleteConfirm": "TER_PROMPT?",
+    "abort": "Abort",
+    "exterminate": "Exterminate",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "Errors": {
+    "noPrompts": "No prompts found",
+    "adjustSearch": "Try adjusting your search or filters",
+    "createFirst": "Create your first prompt to get started",
+    "createFirstBtn": "Create First Prompt"
+  },
+  "System": {
+    "errorTitle": "SYSTEM ERROR",
+    "close": "[ TERMINATE_ERROR_LOG ]",
+    "pasteError": "DATA_TYPE_MISMATCH: The intercepted broadcast contains non-textual fragments. Only plaintext packets can be ingested into the vault."
+  }
+}

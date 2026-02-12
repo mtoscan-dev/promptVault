@@ -1,0 +1,48 @@
+{
+  "Common": {
+    "title": "PromptVault",
+    "version": "v2.0.0",
+    "prompts": "{count} prompts",
+    "versions": "{count} versiones",
+    "found": "{count} encontrados",
+    "newPrompt": "Nuevo Prompt",
+    "tags": "ETIQUETAS",
+    "searchPlaceholder": "Escribe para buscar... [ESPACIO] para etiqueta • [ENTER] para filtrar"
+  },
+  "Terminal": {
+    "selectHint": "[ESPACIO] para seleccionar • [↑↓] para navegar"
+  },
+  "Editor": {
+    "title": "Editar Prompt",
+    "newTitle": "Nuevo Prompt",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Estás seguro de que quieres eliminar este prompt?",
+    "promptTitle": "Título",
+    "description": "Descripción",
+    "content": "Contenido del Prompt",
+    "tags": "Etiquetas (Auto-generadas)",
+    "versionHistory": "Historial de Versiones",
+    "v": "v"
+  },
+  "PromptCard": {
+    "copied": "Copiado",
+    "deleteConfirm": "TER_PROMPT?",
+    "abort": "Abortar",
+    "exterminate": "Exterminar",
+    "edit": "Editar",
+    "delete": "Eliminar"
+  },
+  "Errors": {
+    "noPrompts": "No se encontraron prompts",
+    "adjustSearch": "Intenta ajustar tu búsqueda o filtros",
+    "createFirst": "Crea tu primer prompt para empezar",
+    "createFirstBtn": "Crear Primer Prompt"
+  },
+  "System": {
+    "errorTitle": "ERROR_SISTEMA",
+    "close": "[ TERMINAR_LOG_ERROR ]",
+    "pasteError": "ERROR_DATO_NO_COINCIDE: La transmisión interceptada contiene fragmentos no textuales. Solo paquetes de texto plano pueden ser ingresados en la bóveda."
+  }
+}

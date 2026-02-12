@@ -1,4 +1,7 @@
+"use client";
+
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useTranslations } from "next-intl";
 import { Tag } from "@/types";
 import { cn } from "@/utils/cn";
 
@@ -19,9 +22,11 @@ export function TerminalSearch({
   onTagSelect,
   onTagRemove,
 }: TerminalSearchProps) {
+  const t = useTranslations("Terminal");
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<Tag[]>([]);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -111,14 +116,15 @@ export function TerminalSearch({
             value={input}
             onChange={(e) => handleInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
             className="w-full bg-transparent text-green-400 outline-none font-mono text-sm caret-transparent placeholder:text-gray-700"
             placeholder={placeholder}
             autoComplete="off"
             spellCheck={false}
           />
-          {/* Custom blinking cursor - only show when typing or if there is content */}
-          {(input.length > 0 ||
-            inputRef.current === document.activeElement) && (
+          {/* Custom blinking cursor - only show when typing or focused */}
+          {(input.length > 0 || isFocused) && (
             <span
               className={cn(
                 "absolute top-0 text-green-400 pointer-events-none animate-blink",
@@ -158,7 +164,7 @@ export function TerminalSearch({
             </div>
           ))}
           <div className="px-3 py-1 text-xs text-gray-600 border-t border-gray-800">
-            [SPACE] to select • [↑↓] to navigate
+            {t("selectHint")}
           </div>
         </div>
       )}

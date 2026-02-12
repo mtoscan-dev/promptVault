@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
+import { es, enUS } from "date-fns/locale";
+import { useTranslations, useLocale } from "next-intl";
 import { GitBranch, Clock, Trash2, Edit3, Check } from "lucide-react";
 import { Prompt } from "@/types";
 import { TagBadge } from "@/components/TagBadge";
@@ -11,6 +13,10 @@ interface PromptCardProps {
 }
 
 export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
+  const t = useTranslations("PromptCard");
+  const locale = useLocale();
+  const dateLocale = locale === "es" ? es : enUS;
+
   const [copied, setCopied] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const currentVersion = prompt.versions.find(
@@ -46,7 +52,7 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
             <Check className="text-black" size={20} />
           </div>
           <span className="text-green-400 font-mono font-bold text-sm tracking-widest uppercase">
-            Copied
+            {t("copied")}
           </span>
         </div>
       </div>
@@ -62,7 +68,7 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
         <div className="flex flex-col items-center gap-4 p-4 w-full max-w-[200px]">
           <div className="text-red-500 font-mono text-[10px] font-bold tracking-tighter uppercase mb-1 flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-red-500 animate-pulse rounded-full" />
-            TER_PROMPT?
+            {t("deleteConfirm")}
           </div>
           <div className="flex gap-2 w-full">
             <button
@@ -72,7 +78,7 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
               }}
               className="flex-1 py-1 px-2 border border-gray-700 hover:bg-gray-800 text-gray-400 text-[10px] font-mono uppercase tracking-wider transition-colors rounded"
             >
-              Abort
+              {t("abort")}
             </button>
             <button
               onClick={(e) => {
@@ -82,7 +88,7 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
               }}
               className="flex-1 py-1 px-2 bg-red-950/30 border border-red-900/50 hover:bg-red-900/50 text-red-500 text-[10px] font-mono uppercase tracking-wider transition-all rounded shadow-lg shadow-red-900/20"
             >
-              Exterminate
+              {t("exterminate")}
             </button>
           </div>
         </div>
@@ -110,7 +116,7 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
               onSelect(prompt);
             }}
             className="p-1.5 text-gray-500 hover:text-green-400 hover:bg-gray-800 rounded transition-colors"
-            title="Edit"
+            title={t("edit")}
           >
             <Edit3 size={16} />
           </button>
@@ -120,7 +126,7 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
               setShowDeleteConfirm(true);
             }}
             className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded transition-colors"
-            title="Delete"
+            title={t("delete")}
           >
             <Trash2 size={16} />
           </button>
@@ -149,7 +155,10 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
           </span>
           <span className="flex items-center gap-1" suppressHydrationWarning>
             <Clock size={12} />
-            {formatDistanceToNow(prompt.updatedAt, { addSuffix: true })}
+            {formatDistanceToNow(prompt.updatedAt, {
+              locale: dateLocale,
+              addSuffix: true,
+            })}
           </span>
         </div>
         <span className="text-gray-700">id:{prompt.id.slice(0, 8)}</span>

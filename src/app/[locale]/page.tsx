@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Plus, Terminal, Database, GitBranch } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { v4 as uuidv4 } from "uuid";
 import { TerminalSearch } from "@/components/TerminalSearch";
 import { TagCloud } from "@/components/TagCloud";
@@ -12,8 +13,13 @@ import { initialPrompts } from "@/data/mock";
 import { classifyPrompt } from "@/utils/classification";
 import { TAG_COLORS } from "@/utils/styling";
 import { SystemErrorModal } from "@/components/SystemErrorModal";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 
 export default function Home() {
+  const tCommon = useTranslations("Common");
+  const tErrors = useTranslations("Errors");
+  const tSystem = useTranslations("System");
+
   const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts);
   const [tags, setTags] = useState<Tag[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -68,8 +74,7 @@ export default function Home() {
         const items = event.clipboardData?.items;
         if (items && items.length > 0) {
           setSystemError({
-            message:
-              "DATA_TYPE_MISMATCH: The intercepted broadcast contains non-textual fragments. Only plaintext packets can be ingested into the vault.",
+            message: tSystem("pasteError"),
           });
         }
       }
@@ -77,7 +82,7 @@ export default function Home() {
 
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, []);
+  }, [tSystem]);
 
   // Search Logic
   const filteredPrompts = prompts.filter((prompt) => {
@@ -230,20 +235,26 @@ export default function Home() {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 text-green-400">
                 <Terminal size={24} />
-                <span className="text-xl font-bold">PromptVault</span>
+                <span className="text-xl font-bold">{tCommon("title")}</span>
               </div>
-              <span className="text-gray-600 text-sm">v2.0.0</span>
+              <span className="text-gray-600 text-sm">
+                {tCommon("version")}
+              </span>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <Database size={14} />
-                <span>{prompts.length} prompts</span>
+                <span>{tCommon("prompts", { count: prompts.length })}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <GitBranch size={14} />
                 <span>
-                  {prompts.reduce((acc, p) => acc + p.versions.length, 0)}{" "}
-                  versions
+                  {tCommon("versions", {
+                    count: prompts.reduce(
+                      (acc, p) => acc + p.versions.length,
+                      0,
+                    ),
+                  })}
                 </span>
               </div>
               <div className="h-4 w-px bg-gray-800" />
@@ -251,14 +262,16 @@ export default function Home() {
                 <span className="text-green-400 font-bold">
                   {filteredPrompts.length}
                 </span>{" "}
-                found
+                {tCommon("found", { count: filteredPrompts.length })}
               </div>
+              <div className="h-4 w-px bg-gray-800" />
+              <LocaleSwitcher />
               <button
                 onClick={handleNewPrompt}
                 className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded text-sm transition-colors cursor-pointer ml-2"
               >
                 <Plus size={16} />
-                New Prompt
+                {tCommon("newPrompt")}
               </button>
             </div>
           </div>
@@ -283,11 +296,11 @@ export default function Home() {
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-gray-600">
               <Terminal size={48} className="mb-4 opacity-50" />
-              <p className="text-lg mb-2">No prompts found</p>
+              <p className="text-lg mb-2">{tErrors("noPrompts")}</p>
               <p className="text-sm">
                 {searchQuery || selectedTags.length > 0
-                  ? "Try adjusting your search or filters"
-                  : "Create your first prompt to get started"}
+                  ? tErrors("adjustSearch")
+                  : tErrors("createFirst")}
               </p>
               {prompts.length === 0 && (
                 <button
@@ -295,7 +308,7 @@ export default function Home() {
                   className="mt-4 flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded transition-colors"
                 >
                   <Plus size={16} />
-                  Create First Prompt
+                  {tErrors("createFirstBtn")}
                 </button>
               )}
             </div>
@@ -308,7 +321,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 py-1.5 space-y-1.5">
           {/* Row 1: Tags */}
           <div className="flex items-center gap-2 overflow-hidden">
-            <span className="text-gray-600 text-xs shrink-0">ETIQUETAS:</span>
+            <span className="text-gray-600 text-xs shrink-0">
+              {tCommon("tags")}:
+            </span>
             <TagCloud
               tags={tags}
               selectedTags={selectedTags}
@@ -321,7 +336,7 @@ export default function Home() {
             <TerminalSearch
               tags={tags}
               selectedTags={selectedTags}
-              placeholder="Escribe para buscar... [ESPACIO] para etiqueta • [ENTER] para filtrar"
+              placeholder={tCommon("searchPlaceholder")}
               onSearch={handleSearch}
               onTagSelect={handleTagSelect}
               onTagRemove={handleTagRemove}
