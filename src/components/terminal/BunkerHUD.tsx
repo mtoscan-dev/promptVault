@@ -49,7 +49,7 @@ export function BunkerHUD() {
             key={sector.id}
             href={sector.path}
             className={cn(
-              "group relative flex items-center gap-1.5 px-3 py-1 text-[10px] font-mono transition-all duration-300",
+              "group relative flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono transition-all duration-300",
               isActive
                 ? "text-(--text-primary)"
                 : "text-(--text-secondary) hover:text-(--text-primary)",

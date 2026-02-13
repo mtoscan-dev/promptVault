@@ -14,8 +14,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx db/seed.ts"
+    "db:studio": "drizzle-kit studio --port 4984",
+    "db:seed": "DATABASE_URL=postgresql://admin:secret@localhost:5433/promptvault_db pnpm tsx db/seed.ts"
   },
   "dependencies": {
     "@types/uuid": "^10.0.0",

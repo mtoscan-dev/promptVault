@@ -1,0 +1,28 @@
+# Dependencias y Build
+node_modules
+.next
+out
+build
+dist
+
+# Datos Persistentes (Evita que entren a la imagen)
+ollama_data/
+postgres_data/
+backups/*.gz
+
+# Configuración y Secretos
+.env
+.env.*
+.git
+.gitignore
+
+# Scripts y Herramientas del Host
+*.sh
+init-db/*.sql
+Dockerfile
+Dockerfile.dev
+docker-compose.yml
+
+# Basura del Sistema
+.DS_Store
+Thumbs.db
