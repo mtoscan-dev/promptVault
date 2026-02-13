@@ -1,3 +1,8 @@
+---
+name: ai-architect
+description: "Guidelines for building reliable, production-ready AI features in PromptVault."
+---
+
 # 🤖 AI Architect Rule
 
 Guidelines for building reliable, production-ready AI features in PromptVault.

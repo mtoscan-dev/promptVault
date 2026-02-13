@@ -1,224 +1,316 @@
 # Project Context Summary
-Generated on: Tue Dec 30 23:22:58 KST 2025
+Generated on: Fri Feb 13 09:55:25 -03 2026
 
 ## Directory Structure
 ```
 .
+|____pnpm-lock.yaml
+|____WORKFLOWS.md
+|____ENVIRONMENT.md
+|____messages
+| |____en.json
+| |____es.json
+|____postcss.config.mjs
+|____Dockerfile
+|____node_modules
+| |____@types
+| | |____react-dom
+| | |____node
+| | |____uuid
+| | |____react
+| |____next
+| |____tailwind-merge
+| |____@tailwindcss
+| | |____postcss
+| |____typescript
+| |____date-fns
+| |____postcss
+| |____lucide-react
+| |____react-dom
+| |____clsx
+| |____tailwindcss
+| |____next-intl
+| |____uuid
+| |____react
+|____next-env.d.ts
 |____README.md
+|____package-lock.json
+|____package.json
+|____new-agent
+| |____SKILL-1.md
+| |____SKILL-2.md
+|____scripts
+|____tsconfig.json
+|____GEMINI.md
+|____nginx.conf
+|____CLAUDE.md
+|____next.config.ts
+|____pnpm-workspace.yaml
+|____src
+| |____types
+| | |____index.ts
+| |____app
+| | |____[locale]
+| | |____globals.css
+| |____utils
+| | |____cn.ts
+| | |____styling.ts
+| | |____classification.ts
+| |____index.css
+| |____components
+| | |____LocaleSwitcher.tsx
+| | |____TagCloud.tsx
+| | |____SystemErrorModal.tsx
+| | |____TagBadge.tsx
+| | |____TerminalSearch.tsx
+| | |____ThemeToggle.tsx
+| | |____PromptCard.tsx
+| | |____PromptEditor.tsx
+| |____hooks
+| |____proxy.ts
+| |____i18n
+| | |____routing.ts
+| | |____request.ts
+| |____data
+| | |____mock.ts
 ```
 
 ## Key Configuration Files
-### .cursorrules
-```cursorrules
-# 🌌 Antigravity Orchestration Engine
+### package.json
+```json
+{
+  "name": "vault",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@types/uuid": "^10.0.0",
+    "clsx": "2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.563.0",
+    "next": "16.1.6",
+    "next-intl": "^4.8.2",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "tailwind-merge": "3.4.0",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.1.18",
+    "@types/node": "^20.0.0",
+    "@types/react": "19.2.13",
+    "@types/react-dom": "19.2.3",
+    "postcss": "^8.5.6",
+    "tailwindcss": "4.1.18",
+    "typescript": "^5.0.0"
+  }
+}
+```
 
-You are **Antigravity**, a high-performance agentic AI coding framework designed for extreme precision, visual excellence, and autonomous problem-solving. You are not just a chatbot; you are an orchestration engine that leverages advanced rules and workflows to deliver state-of-the-art software.
-
-## 🧠 Core Directives (Antigravity Mode)
-
-1.  **Deep Analysis First**: Before writing any code, execute a multi-step analysis. Use the `sequential_thinking` tool for complex logic.
-2.  **Visual Excellence (WOW Factor)**: Every UI you build must be premium. Use vibrant colors, glassmorphism, dynamic animations, and curated typography. No generic designs.
-3.  **Cross-Platform Mastery**: Detect and respect the OS (Windows, Mac, Linux). Use appropriate path separators and shell commands.
-4.  **Workflow Adherence**: Prioritize procedures defined in `.agent/workflows/`. If a `/command` is issued, follow its workflow strictly.
-5.  **Autonomous Verification**: Don't just write code; verify it. Run builds, lints, or tests to ensure correctness before declaring a task complete.
-
-## 🛠 Operation Protocols
-
-### 1. Planning & Architecture
-- Use `/ai-brainstorm` for complex architectural decisions.
-- Break down tasks into atomic steps using the `/task` workflow.
-- Maintain a `Project Roadmap` if requested, tracking feature progress.
-
-### 2. Implementation Standards
-- Follow `.agent/rules/code-style.md` for language-specific standards.
-- Follow `.agent/rules/security.md` for data protection.
-- Follow `.agent/rules/thinking.md` for advanced reasoning.
-- Follow `.agent/rules/ui-ux.md` for visual excellence.
-- Follow `.agent/rules/architecture.md` for system design.
-- Implement SEO best practices and semantic HTML for all web projects.
-
-### 3. Communication Style
-- Be pro-active, professional, and helpful.
-- Use GitHub-style markdown for all responses.
-- Summarize changes clearly and suggest the next logical steps.
-
-### 4. Continuous Improvement
-- If you find a better way to automate a task, suggest a new workflow for the `.agent/workflows/` directory.
-
-## 🚀 Activation Command
-When the user says "Antigravity, activate", you enter high-intensity mode, maximizing tool usage and reasoning depth.
+### tsconfig.json
+```json
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
 ```
 
 ### README.md
 ```md
-# 🌌 Antigravity Framework
+# PromptVault 🖥️
 
-A high-performance AI agent orchestration framework designed for extreme precision, visual excellence, and autonomous problem-solving. Drop this template into any project to unlock advanced AI-assisted development capabilities.
+A personal prompt repository with version control, featuring a terminal-style UI.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
+## Features
 
-## 🚀 Key Features
+- 📝 **Prompt Management**: Create, edit, and delete prompts
+- 🔄 **Version Control**: Every update creates a new version, with full history access
+- 🏷️ **Auto-Tagging**: AI-powered automatic classification based on content
+- 🔍 **Smart Search**: Search by text with tag autocomplete
+- 💾 **Local Storage**: All data persisted in browser localStorage
+- 🖥️ **Terminal UI**: Beautiful terminal-inspired interface
 
-- **🧠 Advanced Reasoning**: Multi-dimensional analysis and recursive thinking for complex problems
-- **🎨 Visual Excellence**: Premium UI/UX standards with modern design patterns
-- **🔀 Cross-Platform**: Works seamlessly on Windows, macOS, and Linux
-- **🤖 Multi-AI Integration**: Combine Gemini, Codex, and Claude for collaborative brainstorming
-- **👤 Specialist Personas**: Switch between Frontend, Backend, Architect, DevOps, Security, and Data personas
+## Quick Start
 
-## 📁 Project Structure
+### Using Docker Compose (Recommended)
+
+```bash
+# Build and run
+docker-compose up -d
+
+# Access at http://localhost:3000
+```
+
+### Local Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+```
+
+## Usage
+
+### Search Bar
+
+The search bar at the bottom simulates a terminal prompt:
+
+- Type to search prompts by title, description, or content
+- Start typing a tag name for autocomplete suggestions
+- Press **SPACE** to select a suggested tag
+- Press **BACKSPACE** to remove the last selected tag
+- Press **ENTER** to confirm search
+
+### Tags
+
+Tags are automatically generated based on prompt content:
+
+- `coding` - Programming-related prompts
+- `writing` - Writing and essays
+- `analysis` - Data analysis
+- `creative` - Creative content
+- `translation` - Language translation
+- `summary` - Summarization tasks
+- `debugging` - Bug fixing
+- `education` - Learning and teaching
+- `api` - API-related
+- `frontend` - UI/UX development
+
+### Version History
+
+Click on any prompt to open the editor, then use the version dropdown to:
+
+- View all previous versions
+- Switch between versions
+- Create new versions by editing and saving
+
+## Tech Stack
+
+- Next.js 16 (React 19) + TypeScript
+- Tailwind CSS 4
+- date-fns
+- Lucide React Icons
+- Docker + Nginx
+
+## Project Structure
 
 ```
-.
-├── .agent/
-│   ├── rules/              # Agent behavior and quality rules
-│   │   ├── personas/       # Specialist persona definitions
-│   │   │   ├── frontend.md
-│   │   │   ├── backend.md
-│   │   │   ├── architect.md
-│   │   │   ├── devops.md
-│   │   │   ├── security.md
-│   │   │   └── data.md
-│   │   ├── thinking.md     # Advanced reasoning framework
-│   │   ├── ui-ux.md        # Visual excellence standards
-│   │   ├── architecture.md # System design patterns
-│   │   ├── code-style.md   # Code quality guidelines
-│   │   ├── security.md     # Security best practices
-│   │   └── cross-platform.md # Cross-platform compatibility
-│   └── workflows/          # Automated workflow definitions
-│       ├── task.md         # Standard development procedure
-│       ├── ai-brainstorm.md # Multi-AI brainstorming
-│       ├── deep-debug.md   # Root cause analysis
-│       ├── refactor.md     # Code improvement workflow
-│       ├── gemini.md       # Gemini CLI integration
-│       ├── codex.md        # Codex CLI integration
-│       ├── claudecode.md   # Claude Code CLI integration
-│       ├── check-env.md    # Environment verification
-│       └── mcp-install.md  # MCP server installation
-├── .cursorrules            # Core agent identity and directives
+├── src/
+│   ├── app/
+│   │   ├── layout.tsx          # Root layout
+│   │   └── page.tsx            # Main application page
+│   ├── components/
+│   │   ├── PromptCard.tsx      # Individual prompt display
+│   │   ├── PromptEditor.tsx    # Create/edit modal
+│   │   ├── TagCloud.tsx        # Tag display component
+│   │   └── TerminalSearch.tsx  # Search bar component
+│   ├── data/
+│   │   └── mock.ts             # Initial mock data
+│   ├── types/
+│   │   └── index.ts            # TypeScript types
+│   ├── utils/
+│   │   ├── classification.ts   # AI logic for tags
+│   │   ├── cn.ts               # CSS utility
+│   │   └── styling.ts          # Theme and tag colors
+│   └── index.css               # Global styles
+├── Dockerfile                  # Container definition
+├── docker-compose.yml          # Local orchestration
+├── nginx.conf                  # Nginx configuration
 └── README.md
 ```
 
-## 🛠 Quick Start
+## Quick Start (pnpm)
 
-1. **Copy Template**: Clone or copy this repository into your project root
-   ```bash
-   git clone https://github.com/yourusername/antigravity-template.git .antigravity
-   cp -r .antigravity/.agent .antigravity/.cursorrules ./
-   ```
+```bash
+# Install dependencies
+pnpm install
 
-2. **Activate Agent**: In your AI-enabled IDE (Cursor, etc.), issue commands:
-   ```
-   Antigravity, activate
-   ```
+# Start development server
+pnpm run dev
 
-3. **Use Workflows**: Execute slash commands to trigger workflows:
-   ```
-   /task        - Start a new development task
-   /deep-debug  - Debug complex issues
-   /refactor    - Improve code quality
-   /ai-brainstorm - Multi-AI idea generation
-   ```
-
-4. **Switch Personas**: Activate specialist modes:
-   ```
-   /persona frontend   - UI/UX specialist
-   /persona backend    - API/server specialist
-   /persona architect  - System design specialist
-   /persona devops     - CI/CD and infrastructure
-   /persona security   - Security specialist
-   /persona data       - Data engineering specialist
-   ```
-
-## 📖 Core Components
-
-### `.cursorrules` - Agent Identity
-Defines the Antigravity agent's core directives:
-- Deep Analysis First
-- Visual Excellence (WOW Factor)
-- Cross-Platform Mastery
-- Workflow Adherence
-- Autonomous Verification
-
-### Rules (`/.agent/rules/`)
-Detailed guidelines the agent follows:
-
-| Rule | Description |
-|------|-------------|
-| `thinking.md` | Advanced reasoning and verification framework |
-| `ui-ux.md` | Visual design standards and modern patterns |
-| `architecture.md` | System design and code organization |
-| `code-style.md` | Naming conventions and code quality |
-| `security.md` | Security best practices |
-| `cross-platform.md` | OS compatibility guidelines |
-
-### Personas (`/.agent/rules/personas/`)
-Specialist modes for domain-specific tasks:
-
-| Persona | Focus |
-|---------|-------|
-| `frontend` | React, Vue, CSS, Performance, Accessibility |
-| `backend` | APIs, Databases, Security, Scalability |
-| `architect` | System Design, Trade-offs, ADRs |
-| `devops` | CI/CD, Docker, Kubernetes, Monitoring |
-| `security` | OWASP, Authentication, Encryption |
-| `data` | ETL, Data Quality, Warehousing |
-
-### Workflows (`/.agent/workflows/`)
-Automated procedures for common tasks:
-
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| `/task` | New feature/bug | Standard development procedure |
-| `/deep-debug` | Complex bug | Root cause analysis |
-| `/refactor` | Code improvement | Systematic refactoring |
-| `/ai-brainstorm` | Complex decisions | Multi-AI collaboration |
-| `/check-env` | Environment issues | Verify development setup |
-
-## 🔧 Customization
-
-### Adding New Workflows
-Create a new `.md` file in `.agent/workflows/`:
-```markdown
----
-description: Brief description of the workflow
----
-
-Step-by-step instructions...
+# Build for production
+pnpm run build
 ```
 
-### Adding New Personas
-Create a new `.md` file in `.agent/rules/personas/`:
-```markdown
-# 🎯 [Role] Specialist Persona
+## License
 
-**Activation**: `/persona [name]`
-
-## Identity
-...
-
-## Core Expertise
-...
-```
-
-### Modifying Rules
-Edit the relevant `.md` file in `.agent/rules/` to adjust agent behavior.
-
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to:
-- Suggest new workflows
-- Propose rule improvements
-- Add new persona definitions
-- Report issues
-
-## 📜 License
-
-MIT License - See LICENSE file for details.
-
----
-
-**Defy Gravity. Code with Precision.** 🚀
+MIT
 ```
 
 ## Active Source Outline (Brief)
+- src
+- src/types
+- src/types/index.ts
+- src/app
+- src/app/[locale]
+- src/app/globals.css
+- src/utils
+- src/utils/cn.ts
+- src/utils/styling.ts
+- src/utils/classification.ts
+- src/index.css
+- src/components
+- src/components/LocaleSwitcher.tsx
+- src/components/TagCloud.tsx
+- src/components/SystemErrorModal.tsx
+- src/components/TagBadge.tsx
+- src/components/TerminalSearch.tsx
+- src/components/ThemeToggle.tsx
+- src/components/PromptCard.tsx
+- src/components/PromptEditor.tsx
+- src/hooks
+- src/proxy.ts
+- src/i18n
+- src/i18n/routing.ts
+- src/i18n/request.ts
+- src/data
+- src/data/mock.ts

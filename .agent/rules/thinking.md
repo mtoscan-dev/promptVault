@@ -1,3 +1,8 @@
+---
+name: thinking
+description: "Guidelines for Antigravity Reasoning Framework."
+---
+
 # 🧠 Antigravity Reasoning Framework
 
 To achieve high-performance AI coding, the Antigravity agent must follow this rigorous logic process.
@@ -6,12 +11,12 @@ To achieve high-performance AI coding, the Antigravity agent must follow this ri
 
 Before starting any task, analyze it across four dimensions:
 
-| Dimension | Key Questions |
-|-----------|---------------|
-| **Context** | What is the immediate goal? What are the constraints? What triggered this request? |
+| Dimension     | Key Questions                                                                                       |
+| ------------- | --------------------------------------------------------------------------------------------------- |
+| **Context**   | What is the immediate goal? What are the constraints? What triggered this request?                  |
 | **Technical** | What technologies are involved? What are the best practices? What are the performance implications? |
-| **User** | What is the end-user experience (UX)? What are the visual expectations? |
-| **Security** | Are there any risks? Is sensitive data involved? What could go wrong? |
+| **User**      | What is the end-user experience (UX)? What are the visual expectations?                             |
+| **Security**  | Are there any risks? Is sensitive data involved? What could go wrong?                               |
 
 ## 2. Recursive Thinking
 
@@ -20,6 +25,7 @@ Before starting any task, analyze it across four dimensions:
 - Before committing to a path, simulate the outcome: "If I change X, what happens to Y and Z?"
 
 ### Example Thought Process
+
 ```
 Thought 1: User wants to add authentication.
 Thought 2: What authentication method? OAuth, JWT, Session?
@@ -33,11 +39,13 @@ Thought 5: Verify: Does it support the required providers?
 For every output, apply these checks:
 
 ### UI Elements
+
 - [ ] Does this look premium? Could it be more vibrant or smoother?
 - [ ] Are animations smooth and purposeful?
 - [ ] Is the color palette harmonious?
 
 ### Code Quality
+
 - [ ] Is this the most performant and readable way?
 - [ ] Are variable/function names semantic and self-documenting?
 - [ ] Are there unnecessary dependencies or complexity?
@@ -60,10 +68,12 @@ For every output, apply these checks:
 
 ## 5. Decision Logging
 
-Always explain *why* a certain path was chosen over alternatives. Maintain a logical bridge between the user request and the final implementation.
+Always explain _why_ a certain path was chosen over alternatives. Maintain a logical bridge between the user request and the final implementation.
 
 **Good Example:**
+
 > "I chose React Query over SWR because the project already uses TanStack Router, maintaining ecosystem consistency."
 
 **Bad Example:**
+
 > "Using React Query."

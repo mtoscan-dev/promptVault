@@ -1,3 +1,8 @@
+---
+name: code-style
+description: "Guidelines for creating maintainable, scalable, and robust software architectures."
+---
+
 # ✨ Code Style Guidelines
 
 Maintain consistent, readable, and high-quality code across all projects.
@@ -11,18 +16,19 @@ Maintain consistent, readable, and high-quality code across all projects.
 
 ## 2. Naming Conventions
 
-| Element | Style | Example |
-|---------|-------|---------|
-| Variables | camelCase | `userName`, `itemCount` |
-| Constants | UPPER_SNAKE_CASE | `MAX_RETRIES`, `API_URL` |
-| Functions | camelCase (verb+noun) | `getUserById`, `validateInput` |
-| Classes | PascalCase | `UserService`, `HttpClient` |
-| Files (JS/TS) | camelCase or kebab-case | `userService.ts`, `user-service.ts` |
-| Files (Python) | snake_case | `user_service.py` |
+| Element        | Style                   | Example                             |
+| -------------- | ----------------------- | ----------------------------------- |
+| Variables      | camelCase               | `userName`, `itemCount`             |
+| Constants      | UPPER_SNAKE_CASE        | `MAX_RETRIES`, `API_URL`            |
+| Functions      | camelCase (verb+noun)   | `getUserById`, `validateInput`      |
+| Classes        | PascalCase              | `UserService`, `HttpClient`         |
+| Files (JS/TS)  | camelCase or kebab-case | `userService.ts`, `user-service.ts` |
+| Files (Python) | snake_case              | `user_service.py`                   |
 
 ## 3. Code Organization
 
 ### File Structure
+
 ```
 1. Imports (external → internal)
 2. Constants/Types
@@ -31,11 +37,13 @@ Maintain consistent, readable, and high-quality code across all projects.
 ```
 
 ### Function Length
+
 - Target: 20-30 lines
 - Maximum: 50 lines
 - If longer, consider breaking into smaller functions
 
 ### Import Order
+
 1. Built-in/Standard library
 2. External dependencies
 3. Internal modules (absolute paths)
@@ -44,12 +52,14 @@ Maintain consistent, readable, and high-quality code across all projects.
 ## 4. Comments
 
 ### When to Comment
+
 - Complex business logic
 - Non-obvious workarounds
 - TODO items with context
 - Public API documentation
 
 ### Comment Style
+
 ```javascript
 // Single line for brief explanations
 
@@ -69,14 +79,16 @@ Maintain consistent, readable, and high-quality code across all projects.
 
 ```javascript
 // ❌ Bad
-try { doSomething(); } catch (e) {}
+try {
+  doSomething();
+} catch (e) {}
 
 // ✅ Good
 try {
   doSomething();
 } catch (error) {
-  logger.error('Failed to do something', { error, context });
-  throw new ApplicationError('Operation failed', { cause: error });
+  logger.error("Failed to do something", { error, context });
+  throw new ApplicationError("Operation failed", { cause: error });
 }
 ```
 
