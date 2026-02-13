@@ -140,6 +140,21 @@ export default function Home() {
     setSelectedTags((prev) => (prev.includes(tag) ? prev : [...prev, tag]));
   }, []);
 
+  const handleCardTagAdd = useCallback((promptId: string, tag: string) => {
+    setPrompts((prev) =>
+      prev.map((prompt) =>
+        prompt.id === promptId
+          ? {
+              ...prompt,
+              tags: prompt.tags.includes(tag)
+                ? prompt.tags
+                : [...prompt.tags, tag],
+            }
+          : prompt,
+      ),
+    );
+  }, []);
+
   const handleCardTagRemove = useCallback((promptId: string, tag: string) => {
     setPrompts((prev) =>
       prev.map((prompt) =>
@@ -329,6 +344,7 @@ export default function Home() {
                   onDelete={handleDelete}
                   onTagSearch={handleCardTagSearch}
                   onTagRemove={handleCardTagRemove}
+                  onTagAdd={handleCardTagAdd}
                   tagCounts={tagCounts}
                 />
               ))}

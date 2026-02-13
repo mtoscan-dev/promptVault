@@ -34,7 +34,8 @@
     "abort": "Abort",
     "exterminate": "Exterminate",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "addTag": "ADD"
   },
   "Errors": {
     "noPrompts": "No prompts found",

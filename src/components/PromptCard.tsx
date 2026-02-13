@@ -12,6 +12,7 @@ interface PromptCardProps {
   onDelete: (id: string) => void;
   onTagSearch: (tag: string) => void;
   onTagRemove: (promptId: string, tag: string) => void;
+  onTagAdd: (promptId: string, tag: string) => void;
   tagCounts: Record<string, number>;
 }
 
@@ -21,6 +22,7 @@ export function PromptCard({
   onDelete,
   onTagSearch,
   onTagRemove,
+  onTagAdd,
   tagCounts,
 }: PromptCardProps) {
   const t = useTranslations("PromptCard");
@@ -31,6 +33,8 @@ export function PromptCard({
   const [copied, setCopied] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTagMenu, setActiveTagMenu] = useState<string | null>(null);
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
 
   const currentVersion = prompt.versions.find(
     (v) => v.id === prompt.currentVersionId,
@@ -44,6 +48,15 @@ export function PromptCard({
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
+    }
+  };
+
+  const handleAddTag = (e: React.KeyboardEvent | React.MouseEvent) => {
+    e.stopPropagation();
+    if (newTagName.trim()) {
+      onTagAdd(prompt.id, newTagName.trim());
+      setNewTagName("");
+      setIsAddingTag(false);
     }
   };
 
@@ -205,6 +218,45 @@ export function PromptCard({
             )}
           </div>
         ))}
+
+        {/* Add Tag Button / Input */}
+        <div className="relative z-50 flex items-center">
+          {isAddingTag ? (
+            <div className="flex items-center bg-gray-900 border border-green-500/50 rounded px-1 animate-in fade-in zoom-in-95 duration-200">
+              <span className="text-green-500 text-[10px] font-mono mr-1">
+                $
+              </span>
+              <input
+                autoFocus
+                type="text"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value.toLowerCase())}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddTag(e);
+                  if (e.key === "Escape") {
+                    setIsAddingTag(false);
+                    setNewTagName("");
+                  }
+                }}
+                onBlur={() => {
+                  if (!newTagName.trim()) setIsAddingTag(false);
+                }}
+                className="w-16 bg-transparent text-green-400 outline-none font-mono text-[10px] uppercase tracking-tighter"
+                spellCheck={false}
+              />
+            </div>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsAddingTag(true);
+              }}
+              className="opacity-0 group-hover:opacity-100 px-2 py-0.5 border border-dashed border-gray-700 text-[10px] font-mono rounded text-gray-500 hover:text-green-400 hover:border-green-500/50 transition-all uppercase tracking-tighter shrink-0"
+            >
+              [ {t("addTag")} + ]
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Footer */}
