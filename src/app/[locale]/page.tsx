@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Plus, Terminal, Database, GitBranch } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { v4 as uuidv4 } from "uuid";
 import { TerminalSearch } from "@/components/TerminalSearch";
 import { TagCloud } from "@/components/TagCloud";
@@ -11,8 +12,15 @@ import { Prompt, PromptVersion, Tag } from "@/types";
 import { initialPrompts } from "@/data/mock";
 import { classifyPrompt } from "@/utils/classification";
 import { TAG_COLORS } from "@/utils/styling";
+import { SystemErrorModal } from "@/components/SystemErrorModal";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Home() {
+  const tCommon = useTranslations("Common");
+  const tErrors = useTranslations("Errors");
+  const tSystem = useTranslations("System");
+
   const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts);
   const [tags, setTags] = useState<Tag[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,6 +28,10 @@ export default function Home() {
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isNewPrompt, setIsNewPrompt] = useState(false);
+  const [pasteContent, setPasteContent] = useState("");
+  const [systemError, setSystemError] = useState<{ message: string } | null>(
+    null,
+  );
 
   // Derive Tags
   useEffect(() => {
@@ -40,6 +52,49 @@ export default function Home() {
 
     setTags(tagList.sort((a, b) => b.count - a.count));
   }, [prompts]);
+
+  // Derive Tag Counts for Card Logic (immediate consistency)
+  const tagCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    prompts.forEach((prompt) => {
+      prompt.tags.forEach((tag) => {
+        map[tag] = (map[tag] || 0) + 1;
+      });
+    });
+    return map;
+  }, [prompts]);
+
+  // Global Paste Listener
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      // Don't trigger if we are already in an input/textarea
+      if (
+        document.activeElement?.tagName === "INPUT" ||
+        document.activeElement?.tagName === "TEXTAREA"
+      ) {
+        return;
+      }
+
+      const text = event.clipboardData?.getData("text");
+      if (text) {
+        setPasteContent(text);
+        setSelectedPrompt(null);
+        setIsNewPrompt(true);
+        setIsEditorOpen(true);
+      } else {
+        // Check if there's any file or non-text data
+        const items = event.clipboardData?.items;
+        if (items && items.length > 0) {
+          setSystemError({
+            message: tSystem("pasteError"),
+          });
+        }
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [tSystem]);
 
   // Search Logic
   const filteredPrompts = prompts.filter((prompt) => {
@@ -82,6 +137,35 @@ export default function Home() {
     );
   }, []);
 
+  const handleCardTagSearch = useCallback((tag: string) => {
+    setSelectedTags((prev) => (prev.includes(tag) ? prev : [...prev, tag]));
+  }, []);
+
+  const handleCardTagAdd = useCallback((promptId: string, tag: string) => {
+    setPrompts((prev) =>
+      prev.map((prompt) =>
+        prompt.id === promptId
+          ? {
+              ...prompt,
+              tags: prompt.tags.includes(tag)
+                ? prompt.tags
+                : [...prompt.tags, tag],
+            }
+          : prompt,
+      ),
+    );
+  }, []);
+
+  const handleCardTagRemove = useCallback((promptId: string, tag: string) => {
+    setPrompts((prev) =>
+      prev.map((prompt) =>
+        prompt.id === promptId
+          ? { ...prompt, tags: prompt.tags.filter((t) => t !== tag) }
+          : prompt,
+      ),
+    );
+  }, []);
+
   const handlePromptSelect = useCallback((prompt: Prompt) => {
     setSelectedPrompt(prompt);
     setIsNewPrompt(false);
@@ -90,6 +174,7 @@ export default function Home() {
 
   const handleNewPrompt = useCallback(() => {
     setSelectedPrompt(null);
+    setPasteContent("");
     setIsNewPrompt(true);
     setIsEditorOpen(true);
   }, []);
@@ -183,43 +268,65 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 font-mono flex flex-col">
+    <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] font-mono flex flex-col">
       {/* Header */}
-      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-40">
+      <header className="border-b border-[var(--border-primary)] bg-[var(--bg-surface)]/50 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-1.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 text-green-400">
                 <Terminal size={24} />
-                <span className="text-xl font-bold">PromptVault</span>
+                <span className="text-xl font-bold">{tCommon("title")}</span>
               </div>
-              <span className="text-gray-600 text-sm">v2.0.0</span>
+              <span className="text-gray-600 text-sm">
+                {tCommon("version")}
+              </span>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <Database size={14} />
-                <span>{prompts.length} prompts</span>
+                <span>
+                  {tCommon.rich("prompts", {
+                    count: prompts.length,
+                    b: (chunks) => (
+                      <span className="text-gray-400 font-bold">{chunks}</span>
+                    ),
+                  })}
+                </span>
               </div>
               <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <GitBranch size={14} />
                 <span>
-                  {prompts.reduce((acc, p) => acc + p.versions.length, 0)}{" "}
-                  versions
+                  {tCommon.rich("versions", {
+                    count: prompts.reduce(
+                      (acc, p) => acc + p.versions.length,
+                      0,
+                    ),
+                    b: (chunks) => (
+                      <span className="text-gray-400 font-bold">{chunks}</span>
+                    ),
+                  })}
                 </span>
               </div>
               <div className="h-4 w-px bg-gray-800" />
               <div className="text-sm text-gray-500">
-                <span className="text-green-400 font-bold">
-                  {filteredPrompts.length}
-                </span>{" "}
-                found
+                {tCommon.rich("found", {
+                  count: filteredPrompts.length,
+                  b: (chunks) => (
+                    <span className="text-green-400 font-bold">{chunks}</span>
+                  ),
+                })}
               </div>
+              <div className="h-4 w-px bg-gray-800" />
+              <div className="h-4 w-px bg-gray-800" />
+              <LocaleSwitcher />
+              <ThemeToggle />
               <button
                 onClick={handleNewPrompt}
                 className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded text-sm transition-colors cursor-pointer ml-2"
               >
                 <Plus size={16} />
-                New Prompt
+                {tCommon("newPrompt")}
               </button>
             </div>
           </div>
@@ -238,17 +345,21 @@ export default function Home() {
                   prompt={prompt}
                   onSelect={handlePromptSelect}
                   onDelete={handleDelete}
+                  onTagSearch={handleCardTagSearch}
+                  onTagRemove={handleCardTagRemove}
+                  onTagAdd={handleCardTagAdd}
+                  tagCounts={tagCounts}
                 />
               ))}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-gray-600">
               <Terminal size={48} className="mb-4 opacity-50" />
-              <p className="text-lg mb-2">No prompts found</p>
+              <p className="text-lg mb-2">{tErrors("noPrompts")}</p>
               <p className="text-sm">
                 {searchQuery || selectedTags.length > 0
-                  ? "Try adjusting your search or filters"
-                  : "Create your first prompt to get started"}
+                  ? tErrors("adjustSearch")
+                  : tErrors("createFirst")}
               </p>
               {prompts.length === 0 && (
                 <button
@@ -256,7 +367,7 @@ export default function Home() {
                   className="mt-4 flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded transition-colors"
                 >
                   <Plus size={16} />
-                  Create First Prompt
+                  {tErrors("createFirstBtn")}
                 </button>
               )}
             </div>
@@ -265,11 +376,13 @@ export default function Home() {
       </main>
 
       {/* Footer with terminal search */}
-      <footer className="border-t border-gray-800 bg-gray-900/80 backdrop-blur-sm sticky bottom-0 z-40">
+      <footer className="border-t border-[var(--border-primary)] bg-[var(--bg-surface)]/80 backdrop-blur-sm sticky bottom-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-1.5 space-y-1.5">
           {/* Row 1: Tags */}
           <div className="flex items-center gap-2 overflow-hidden">
-            <span className="text-gray-600 text-xs shrink-0">ETIQUETAS:</span>
+            <span className="text-gray-600 text-xs shrink-0">
+              {tCommon("tags")}:
+            </span>
             <TagCloud
               tags={tags}
               selectedTags={selectedTags}
@@ -282,7 +395,7 @@ export default function Home() {
             <TerminalSearch
               tags={tags}
               selectedTags={selectedTags}
-              placeholder="Escribe para buscar... [ESPACIO] para etiqueta • [ENTER] para filtrar"
+              placeholder={tCommon("searchPlaceholder")}
               onSearch={handleSearch}
               onTagSelect={handleTagSelect}
               onTagRemove={handleTagRemove}
@@ -295,9 +408,20 @@ export default function Home() {
       {isEditorOpen && (
         <PromptEditor
           prompt={isNewPrompt ? null : selectedPrompt}
-          onClose={() => setIsEditorOpen(false)}
+          initialContent={isNewPrompt ? pasteContent : undefined}
+          onClose={() => {
+            setIsEditorOpen(false);
+            setPasteContent("");
+          }}
           onSave={handleSave}
           onVersionSwitch={switchVersion}
+        />
+      )}
+
+      {systemError && (
+        <SystemErrorModal
+          message={systemError.message}
+          onClose={() => setSystemError(null)}
         />
       )}
     </div>
