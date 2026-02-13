@@ -1,0 +1,83 @@
+services:
+  # Base de Datos con pgvector y script inicial nativo
+  db:
+    image: ankane/pgvector:latest
+    container_name: vault_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d:ro # Scripts de inicialización
+    ports:
+      - "${DB_PORT}:5432"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vault_network
+
+  # Motor de IA Local
+  ollama:
+    image: ollama/ollama
+    container_name: vault_ai
+    volumes:
+      - ./ollama_data:/root/.ollama
+    ports:
+      - "${OLLAMA_PORT}:11434"
+    deploy:
+      resources:
+        limits:
+          memory: 2.5G # Espacio para Qwen 2.5 y Embeddings
+    networks:
+      - vault_network
+
+  # Aplicación Next.js (Drizzle + Soberanía)
+  app:
+    build:
+      context: .
+      dockerfile: ${APP_DOCKERFILE:-Dockerfile} # Usa la variable o el standalone por defecto
+    container_name: vault_app
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      OLLAMA_HOST: http://ollama:11434
+    ports:
+      - "3000:3000"
+    # Los volúmenes solo son necesarios en desarrollo (Hot Reload)
+    # En producción (standalone) Docker los ignora si el archivo no los usa
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    deploy:
+      resources:
+        limits:
+          memory: ${APP_MEM_LIMIT:-1G}
+    depends_on:
+      - db
+      - ollama
+
+  # Gateway Nginx
+  nginx:
+    image: nginx:alpine
+    container_name: vault_gateway
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro # Mapeo en modo solo lectura
+    depends_on:
+      - app
+    networks:
+      - vault_network
+
+networks:
+  vault_network:
+    driver: bridge

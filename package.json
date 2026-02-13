@@ -7,12 +7,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "pnpm run build",
+    "clean:install": "rm -rf node_modules pnpm-lock.yaml && pnpm install",
+    "build:standalone": "next build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public"
   },
   "dependencies": {
     "@types/uuid": "^10.0.0",
     "clsx": "2.1.1",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.34.0",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
     "next-intl": "^4.8.2",

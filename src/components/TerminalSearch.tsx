@@ -90,7 +90,7 @@ export function TerminalSearch({
     <div className="relative">
       <div className="flex items-center gap-2">
         {/* Terminal prompt */}
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <span className="text-purple-400 font-bold">~</span>
           <span className="text-green-400 font-bold">&gt;</span>
         </div>
@@ -101,7 +101,7 @@ export function TerminalSearch({
             <span
               key={tag}
               onClick={() => onTagRemove(tag)}
-              className="px-2 py-0.5 bg-[var(--acc-primary-glow)] text-[var(--acc-primary)] text-sm rounded cursor-pointer hover:bg-[var(--acc-primary)]/20 transition-colors border border-[var(--acc-primary)]/30"
+              className="px-2 py-0.5 bg-(--acc-primary-glow) text-(--acc-primary) text-sm rounded cursor-pointer hover:bg-(--acc-primary)/20 transition-colors border border-(--acc-primary)/30"
             >
               [{tag}]
             </span>
@@ -118,7 +118,7 @@ export function TerminalSearch({
             onKeyDown={handleKeyDown}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            className="w-full bg-transparent text-[var(--acc-primary)] outline-none font-mono text-sm caret-transparent placeholder:text-[var(--text-muted)]"
+            className="w-full bg-transparent text-(--acc-primary) outline-none font-mono text-sm caret-transparent placeholder:text-(--text-muted)"
             placeholder={placeholder}
             autoComplete="off"
             spellCheck={false}
@@ -127,7 +127,7 @@ export function TerminalSearch({
           {(input.length > 0 || isFocused) && (
             <span
               className={cn(
-                "absolute top-0 text-[var(--acc-primary)] pointer-events-none animate-blink",
+                "absolute top-0 text-(--acc-primary) pointer-events-none animate-blink",
                 input.length === 0 && "opacity-50",
               )}
               style={{ left: `${input.length * 0.6}em` }}
@@ -147,8 +147,8 @@ export function TerminalSearch({
               className={cn(
                 "px-3 py-1 text-sm font-mono cursor-pointer flex items-center justify-between gap-4",
                 index === selectedSuggestion
-                  ? "bg-[var(--acc-primary-glow)] text-[var(--acc-primary)]"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)]",
+                  ? "bg-(--acc-primary-glow) text-(--acc-primary)"
+                  : "text-(--text-secondary) hover:bg-(--bg-surface-hover)",
               )}
               onClick={() => {
                 onTagSelect(tag.name);
@@ -163,7 +163,7 @@ export function TerminalSearch({
               <span className="text-gray-600">({tag.count})</span>
             </div>
           ))}
-          <div className="px-3 py-1 text-xs text-[var(--text-muted)] border-t border-[var(--border-primary)]">
+          <div className="px-3 py-1 text-xs text-(--text-muted) border-t border-(--border-primary)">
             {t("selectHint")}
           </div>
         </div>

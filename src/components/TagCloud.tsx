@@ -25,8 +25,8 @@ export function TagCloud({ tags, selectedTags, onTagClick }: TagCloudProps) {
             className={cn(
               "px-2 py-0.5 text-xs font-mono rounded border transition-all uppercase tracking-tighter hover:brightness-125 shadow-sm",
               isSelected
-                ? "bg-[var(--acc-primary-glow)] border-[var(--acc-primary)] text-[var(--acc-primary)]"
-                : "border-[var(--border-primary)]",
+                ? "bg-(--acc-primary-glow) border-(--acc-primary) text-(--acc-primary)"
+                : "border-(--border-primary)",
             )}
           >
             $ {tag.name}
