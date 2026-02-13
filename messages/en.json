@@ -7,7 +7,9 @@
     "found": "<b>{count}</b> found",
     "newPrompt": "New Prompt",
     "tags": "TAGS",
-    "searchPlaceholder": "Type to search... [SPACE] for tag • [ENTER] to filter"
+    "searchPlaceholder": "Type to search... [SPACE] for tag • [ENTER] to filter",
+    "searchAction": "SEARCH",
+    "deleteAction": "DELETE"
   },
   "Terminal": {
     "selectHint": "[SPACE] to select • [↑↓] to navigate"

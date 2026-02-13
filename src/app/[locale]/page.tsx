@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Plus, Terminal, Database, GitBranch } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { v4 as uuidv4 } from "uuid";
@@ -50,6 +50,17 @@ export default function Home() {
     );
 
     setTags(tagList.sort((a, b) => b.count - a.count));
+  }, [prompts]);
+
+  // Derive Tag Counts for Card Logic (immediate consistency)
+  const tagCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    prompts.forEach((prompt) => {
+      prompt.tags.forEach((tag) => {
+        map[tag] = (map[tag] || 0) + 1;
+      });
+    });
+    return map;
   }, [prompts]);
 
   // Global Paste Listener
@@ -122,6 +133,20 @@ export default function Home() {
   const handleTagCloudClick = useCallback((tag: string) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  }, []);
+
+  const handleCardTagSearch = useCallback((tag: string) => {
+    setSelectedTags((prev) => (prev.includes(tag) ? prev : [...prev, tag]));
+  }, []);
+
+  const handleCardTagRemove = useCallback((promptId: string, tag: string) => {
+    setPrompts((prev) =>
+      prev.map((prompt) =>
+        prompt.id === promptId
+          ? { ...prompt, tags: prompt.tags.filter((t) => t !== tag) }
+          : prompt,
+      ),
     );
   }, []);
 
@@ -302,6 +327,9 @@ export default function Home() {
                   prompt={prompt}
                   onSelect={handlePromptSelect}
                   onDelete={handleDelete}
+                  onTagSearch={handleCardTagSearch}
+                  onTagRemove={handleCardTagRemove}
+                  tagCounts={tagCounts}
                 />
               ))}
             </div>

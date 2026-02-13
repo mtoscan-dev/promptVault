@@ -1,4 +1,4 @@
-import { getTagStyle } from '@/utils/styling';
+import { getTagStyle } from "@/utils/styling";
 
 interface TagBadgeProps {
   name: string;
@@ -6,14 +6,19 @@ interface TagBadgeProps {
   onClick?: () => void;
 }
 
-export const TagBadge = ({ name, className = '', onClick }: TagBadgeProps) => {
+export const TagBadge = ({ name, className = "", onClick }: TagBadgeProps) => {
   const style = getTagStyle(name);
-  
+
   return (
-    <span 
-      onClick={onClick}
+    <span
+      onClick={(e) => {
+        if (onClick) {
+          e.stopPropagation();
+          onClick();
+        }
+      }}
       style={style}
-      className={`terminal-flicker px-2 py-0.5 border text-xs font-mono rounded-md uppercase tracking-tighter transition-all hover:brightness-125 cursor-default ${className}`}
+      className={`terminal-flicker px-2 py-0.5 border text-xs font-mono rounded-md uppercase tracking-tighter transition-all hover:brightness-125 cursor-pointer ${className}`}
     >
       $ {name}
     </span>

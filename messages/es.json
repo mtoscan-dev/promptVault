@@ -7,7 +7,9 @@
     "found": "<b>{count}</b> encontrados",
     "newPrompt": "Nuevo Prompt",
     "tags": "ETIQUETAS",
-    "searchPlaceholder": "Escribe para buscar... [ESPACIO] para etiqueta • [ENTER] para filtrar"
+    "searchPlaceholder": "Escribe para buscar... [ESPACIO] para etiqueta • [ENTER] para filtrar",
+    "searchAction": "BUSCAR",
+    "deleteAction": "ELIMINAR"
   },
   "Terminal": {
     "selectHint": "[ESPACIO] para seleccionar • [↑↓] para navegar"

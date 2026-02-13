@@ -10,15 +10,28 @@ interface PromptCardProps {
   prompt: Prompt;
   onSelect: (prompt: Prompt) => void;
   onDelete: (id: string) => void;
+  onTagSearch: (tag: string) => void;
+  onTagRemove: (promptId: string, tag: string) => void;
+  tagCounts: Record<string, number>;
 }
 
-export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
+export function PromptCard({
+  prompt,
+  onSelect,
+  onDelete,
+  onTagSearch,
+  onTagRemove,
+  tagCounts,
+}: PromptCardProps) {
   const t = useTranslations("PromptCard");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
   const dateLocale = locale === "es" ? es : enUS;
 
   const [copied, setCopied] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeTagMenu, setActiveTagMenu] = useState<string | null>(null);
+
   const currentVersion = prompt.versions.find(
     (v) => v.id === prompt.currentVersionId,
   );
@@ -39,7 +52,7 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
       className="group relative overflow-hidden bg-gray-900/80 border border-gray-700/50 rounded-lg p-3 hover:border-green-600/50 transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-green-900/20 active:translate-y-0"
       onClick={handleCopy}
     >
-      {/* Copied Overlay */}
+      {/* ... previous overlays ... */}
       <div
         className={`absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300 ${
           copied
@@ -57,7 +70,6 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
         </div>
       </div>
 
-      {/* Delete Confirmation Overlay */}
       <div
         className={`absolute inset-0 z-30 flex items-center justify-center bg-gray-950/90 backdrop-blur-md transition-all duration-300 ${
           showDeleteConfirm
@@ -93,6 +105,18 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
           </div>
         </div>
       </div>
+
+      {/* Tags Command Overlay - Global Close Handler */}
+      {activeTagMenu && (
+        <div
+          className="absolute inset-0 z-40 bg-black/20"
+          onClick={(e) => {
+            e.stopPropagation();
+            setActiveTagMenu(null);
+          }}
+        />
+      )}
+
       {/* Scanline Effect */}
       <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 overflow-hidden">
         <div className="absolute inset-0 bg-linear-to-b from-transparent via-green-500/5 to-transparent h-[50%] w-full animate-scanline" />
@@ -143,7 +167,43 @@ export function PromptCard({ prompt, onSelect, onDelete }: PromptCardProps) {
       {/* Tags */}
       <div className="flex flex-wrap gap-1 mb-2">
         {prompt.tags.map((tag) => (
-          <TagBadge key={tag} name={tag} />
+          <div key={tag} className="relative z-50">
+            <TagBadge
+              name={tag}
+              onClick={() =>
+                setActiveTagMenu(activeTagMenu === tag ? null : tag)
+              }
+            />
+            {activeTagMenu === tag && (
+              <div className="absolute bottom-full left-0 mb-1 flex items-center gap-1 bg-gray-950 border border-gray-700 rounded p-1 shadow-2xl animate-in fade-in slide-in-from-bottom-1 duration-200">
+                {tagCounts[tag] > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTagSearch(tag);
+                        setActiveTagMenu(null);
+                      }}
+                      className="px-2 py-0.5 text-[10px] font-mono font-bold text-green-500/70 hover:text-green-400 hover:bg-green-500/10 transition-all"
+                    >
+                      [{tCommon("searchAction")}]
+                    </button>
+                    <div className="w-px h-3 bg-gray-800" />
+                  </>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTagRemove(prompt.id, tag);
+                    setActiveTagMenu(null);
+                  }}
+                  className="px-2 py-0.5 text-[10px] font-mono font-bold text-red-500/70 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                >
+                  [{tCommon("deleteAction")}]
+                </button>
+              </div>
+            )}
+          </div>
         ))}
       </div>
 
