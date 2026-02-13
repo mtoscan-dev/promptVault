@@ -81,9 +81,9 @@ export function PromptEditor({
 
   return (
     <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+      <div className="bg-(--bg-surface) border border-(--border-primary) rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[var(--border-primary)]">
+        <div className="flex items-center justify-between p-4 border-b border-(--border-primary)">
           <div className="flex items-center gap-3">
             <span className="text-green-400 font-mono">
               {isNewPrompt ? "$ new_prompt" : "$ edit_prompt"}
@@ -92,7 +92,7 @@ export function PromptEditor({
               <div className="relative">
                 <button
                   onClick={() => setShowVersions(!showVersions)}
-                  className="flex items-center gap-2 px-3 py-1 bg-[var(--bg-surface-hover)] rounded text-sm font-mono text-[var(--text-primary)] hover:bg-[var(--bg-surface-active)] transition-colors"
+                  className="flex items-center gap-2 px-3 py-1 bg-(--bg-surface-hover) rounded text-sm font-mono text-(--text-primary) hover:bg-(--bg-surface-active) transition-colors"
                 >
                   <GitBranch size={14} className="text-purple-400" />
                   {t("v")}
@@ -101,8 +101,8 @@ export function PromptEditor({
                 </button>
 
                 {showVersions && (
-                  <div className="absolute top-full left-0 mt-1 bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded shadow-lg z-10 min-w-[250px]">
-                    <div className="p-2 border-b border-[var(--border-primary)] text-xs text-[var(--text-muted)] font-mono uppercase tracking-tighter">
+                  <div className="absolute top-full left-0 mt-1 bg-(--bg-surface) border border-(--border-primary) rounded shadow-lg z-10 min-w-[250px]">
+                    <div className="p-2 border-b border-(--border-primary) text-xs text-(--text-muted) font-mono uppercase tracking-tighter">
                       {t("versionHistory")}
                     </div>
                     {prompt.versions
@@ -113,10 +113,10 @@ export function PromptEditor({
                           key={version.id}
                           onClick={() => handleVersionSelect(version)}
                           className={cn(
-                            "w-full px-3 py-2 text-left text-sm font-mono flex items-center justify-between hover:bg-[var(--bg-surface-hover)] transition-colors",
+                            "w-full px-3 py-2 text-left text-sm font-mono flex items-center justify-between hover:bg-(--bg-surface-hover) transition-colors",
                             version.id === selectedVersion?.id
-                              ? "bg-[var(--bg-surface-active)] text-[var(--acc-primary)]"
-                              : "text-[var(--text-primary)]",
+                              ? "bg-(--bg-surface-active) text-(--acc-primary)"
+                              : "text-(--text-primary)",
                           )}
                         >
                           <span className="flex items-center gap-2">
@@ -138,7 +138,7 @@ export function PromptEditor({
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] rounded transition-colors"
+            className="p-2 text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-surface-hover) rounded transition-colors"
           >
             <X size={20} />
           </button>
@@ -148,7 +148,7 @@ export function PromptEditor({
         <div className="flex-1 overflow-auto p-4 space-y-4">
           {/* Title */}
           <div>
-            <label className="block text-xs text-[var(--text-muted)] font-mono mb-1 uppercase tracking-tighter">
+            <label className="block text-xs text-(--text-muted) font-mono mb-1 uppercase tracking-tighter">
               {t("promptTitle")}
             </label>
             <input
@@ -156,13 +156,13 @@ export function PromptEditor({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="..."
-              className="w-full bg-black/5 dark:bg-black/50 border border-[var(--border-primary)] rounded px-3 py-2 text-[var(--acc-primary)] font-mono focus:outline-none focus:border-green-600 transition-colors"
+              className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--acc-primary) font-mono focus:outline-none focus:border-green-600 transition-colors"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-xs text-[var(--text-muted)] font-mono mb-1 uppercase tracking-tighter">
+            <label className="block text-xs text-(--text-muted) font-mono mb-1 uppercase tracking-tighter">
               {t("description")}
             </label>
             <input
@@ -170,13 +170,13 @@ export function PromptEditor({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="..."
-              className="w-full bg-black/5 dark:bg-black/50 border border-[var(--border-primary)] rounded px-3 py-2 text-[var(--text-primary)] font-mono text-sm focus:outline-none focus:border-green-600 transition-colors"
+              className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--text-primary) font-mono text-sm focus:outline-none focus:border-green-600 transition-colors"
             />
           </div>
 
           {/* Content */}
           <div className="flex-1">
-            <label className="block text-xs text-[var(--text-muted)] font-mono mb-1 uppercase tracking-tighter">
+            <label className="block text-xs text-(--text-muted) font-mono mb-1 uppercase tracking-tighter">
               {t("content")}
             </label>
             <textarea
@@ -184,19 +184,19 @@ export function PromptEditor({
               onChange={(e) => setContent(e.target.value)}
               placeholder="..."
               rows={12}
-              className="w-full bg-black/5 dark:bg-black/50 border border-[var(--border-primary)] rounded px-3 py-2 text-[var(--text-primary)] font-mono text-sm focus:outline-none focus:border-green-600 transition-colors resize-none"
+              className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--text-primary) font-mono text-sm focus:outline-none focus:border-green-600 transition-colors resize-none"
             />
           </div>
 
           {/* Info about auto-tagging */}
-          <div className="bg-[var(--bg-surface-hover)] rounded p-3 text-xs text-[var(--text-muted)] font-mono">
+          <div className="bg-(--bg-surface-hover) rounded p-3 text-xs text-(--text-muted) font-mono">
             <span className="text-purple-400">ℹ</span> {t("tags")}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-[var(--border-primary)]">
-          <div className="text-xs text-[var(--text-muted)] font-mono lowercase opacity-60">
+        <div className="flex items-center justify-between p-4 border-t border-(--border-primary)">
+          <div className="text-xs text-(--text-muted) font-mono lowercase opacity-60">
             {hasChanges && (
               <span className="text-yellow-600 dark:text-yellow-500">
                 ● {t("save")}?
@@ -206,7 +206,7 @@ export function PromptEditor({
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] rounded transition-colors"
+              className="px-4 py-2 text-sm font-mono text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-surface-hover) rounded transition-colors"
             >
               {t("cancel")}
             </button>

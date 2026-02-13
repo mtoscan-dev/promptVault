@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: "Secure, local-first prompt management",
 };
 
+import { BunkerHeader } from "@/components/terminal/BunkerHeader";
+
 export default async function RootLayout({
   children,
   params,
@@ -45,9 +47,12 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased font-mono">
+      <body className="antialiased font-mono bg-(--bg-page) text-(--text-primary) min-h-screen flex flex-col">
         <NextIntlClientProvider messages={messages}>
-          {children}
+          <BunkerHeader />
+          <main className="flex-1 flex flex-col overflow-hidden relative">
+            {children}
+          </main>
         </NextIntlClientProvider>
       </body>
     </html>

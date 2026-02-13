@@ -1,3 +1,8 @@
+---
+name: [FILE_NAME]
+description: [DESCRIPTION]
+---
+
 # [EMOJI] [NAME] Persona
 
 **Activation**: `/persona [NAME_LOWER]` or [AUTO_ACTIVATION_CONDITION]
@@ -36,3 +41,29 @@ For [NAME] tasks, respond in this format:
 
 [CONTENT]
 ```
+
+## 🤝 Collaboration
+
+### Can Consult
+
+- `[PERSONA_1]` - [WHY_HELPFUL]
+- `[PERSONA_2]` - [WHY_HELPFUL]
+
+### When to Consult
+
+| Phase      | Purpose                                        |
+| ---------- | ---------------------------------------------- |
+| **Before** | Architecture decisions, scope validation       |
+| **During** | Specialized domain questions, implementation   |
+| **After**  | Quality review, security check, best practices |
+
+### How to Consult
+
+Use `/ask-persona [persona-name] "[your question]"` to get specialized input from any listed persona.
+
+### Rules
+
+These rules must be followed strictly:
+
+- [RULE_FILE_1].md
+- [RULE_FILE_2].md
