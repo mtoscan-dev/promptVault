@@ -9,7 +9,9 @@
     "tags": "ETIQUETAS",
     "searchPlaceholder": "Escribe para buscar... [ESPACIO] para etiqueta • [ENTER] para filtrar",
     "searchAction": "BUSCAR",
-    "deleteAction": "ELIMINAR"
+    "deleteAction": "ELIMINAR",
+    "themeLight": "MODO: CLARO",
+    "themeDark": "MODO: OSCURO"
   },
   "Terminal": {
     "selectHint": "[ESPACIO] para seleccionar • [↑↓] para navegar"

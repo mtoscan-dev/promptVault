@@ -62,7 +62,7 @@ export function PromptCard({
 
   return (
     <div
-      className="group relative overflow-hidden bg-gray-900/80 border border-gray-700/50 rounded-lg p-3 hover:border-green-600/50 transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-green-900/20 active:translate-y-0"
+      className="group relative overflow-hidden bg-[var(--bg-surface)] border border-[var(--border-primary)] rounded-lg p-3 hover:border-green-600/50 transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-green-900/20 active:translate-y-0"
       onClick={handleCopy}
     >
       {/* ... previous overlays ... */}
@@ -142,7 +142,7 @@ export function PromptCard({
             <span className="text-gray-500">$</span>
             {prompt.title}
           </h3>
-          <p className="text-gray-500 text-[10px] font-mono leading-tight">
+          <p className="text-[var(--text-secondary)] text-[10px] font-mono leading-tight">
             # {prompt.description}
           </p>
         </div>
@@ -152,7 +152,7 @@ export function PromptCard({
               e.stopPropagation();
               onSelect(prompt);
             }}
-            className="p-1.5 text-gray-500 hover:text-green-400 hover:bg-gray-800 rounded transition-colors"
+            className="p-1.5 text-[var(--text-muted)] hover:text-green-400 hover:bg-[var(--bg-surface-hover)] rounded transition-colors"
             title={t("edit")}
           >
             <Edit3 size={16} />
@@ -162,7 +162,7 @@ export function PromptCard({
               e.stopPropagation();
               setShowDeleteConfirm(true);
             }}
-            className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded transition-colors"
+            className="p-1.5 text-[var(--text-muted)] hover:text-red-400 hover:bg-[var(--bg-surface-hover)] rounded transition-colors"
             title={t("delete")}
           >
             <Trash2 size={16} />
@@ -171,8 +171,8 @@ export function PromptCard({
       </div>
 
       {/* Content preview */}
-      <div className="bg-black/40 rounded p-2 mb-2 border border-gray-800">
-        <pre className="text-gray-300 text-xs font-mono whitespace-pre-wrap line-clamp-2">
+      <div className="bg-black/10 dark:bg-black/40 rounded p-2 mb-2 border border-[var(--border-primary)]">
+        <pre className="text-[var(--text-secondary)] text-xs font-mono whitespace-pre-wrap line-clamp-2">
           {content}
         </pre>
       </div>
@@ -260,7 +260,7 @@ export function PromptCard({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between text-xs text-gray-600 font-mono">
+      <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-mono">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1">
             <GitBranch size={12} />v{prompt.versions.length}
@@ -273,7 +273,9 @@ export function PromptCard({
             })}
           </span>
         </div>
-        <span className="text-gray-700">id:{prompt.id.slice(0, 8)}</span>
+        <span className="text-[var(--text-muted)] opacity-60">
+          id:{prompt.id.slice(0, 8)}
+        </span>
       </div>
     </div>
   );

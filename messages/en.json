@@ -9,7 +9,9 @@
     "tags": "TAGS",
     "searchPlaceholder": "Type to search... [SPACE] for tag • [ENTER] to filter",
     "searchAction": "SEARCH",
-    "deleteAction": "DELETE"
+    "deleteAction": "DELETE",
+    "themeLight": "MODE: LIGHT",
+    "themeDark": "MODE: DARK"
   },
   "Terminal": {
     "selectHint": "[SPACE] to select • [↑↓] to navigate"

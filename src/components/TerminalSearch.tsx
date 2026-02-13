@@ -101,7 +101,7 @@ export function TerminalSearch({
             <span
               key={tag}
               onClick={() => onTagRemove(tag)}
-              className="px-2 py-0.5 bg-green-900/50 text-green-400 text-sm rounded cursor-pointer hover:bg-green-900/70 transition-colors border border-green-700/50"
+              className="px-2 py-0.5 bg-[var(--acc-primary-glow)] text-[var(--acc-primary)] text-sm rounded cursor-pointer hover:bg-[var(--acc-primary)]/20 transition-colors border border-[var(--acc-primary)]/30"
             >
               [{tag}]
             </span>
@@ -118,7 +118,7 @@ export function TerminalSearch({
             onKeyDown={handleKeyDown}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            className="w-full bg-transparent text-green-400 outline-none font-mono text-sm caret-transparent placeholder:text-gray-700"
+            className="w-full bg-transparent text-[var(--acc-primary)] outline-none font-mono text-sm caret-transparent placeholder:text-[var(--text-muted)]"
             placeholder={placeholder}
             autoComplete="off"
             spellCheck={false}
@@ -127,7 +127,7 @@ export function TerminalSearch({
           {(input.length > 0 || isFocused) && (
             <span
               className={cn(
-                "absolute top-0 text-green-400 pointer-events-none animate-blink",
+                "absolute top-0 text-[var(--acc-primary)] pointer-events-none animate-blink",
                 input.length === 0 && "opacity-50",
               )}
               style={{ left: `${input.length * 0.6}em` }}
@@ -147,8 +147,8 @@ export function TerminalSearch({
               className={cn(
                 "px-3 py-1 text-sm font-mono cursor-pointer flex items-center justify-between gap-4",
                 index === selectedSuggestion
-                  ? "bg-green-900/50 text-green-300"
-                  : "text-gray-400 hover:bg-gray-800",
+                  ? "bg-[var(--acc-primary-glow)] text-[var(--acc-primary)]"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)]",
               )}
               onClick={() => {
                 onTagSelect(tag.name);
@@ -163,7 +163,7 @@ export function TerminalSearch({
               <span className="text-gray-600">({tag.count})</span>
             </div>
           ))}
-          <div className="px-3 py-1 text-xs text-gray-600 border-t border-gray-800">
+          <div className="px-3 py-1 text-xs text-[var(--text-muted)] border-t border-[var(--border-primary)]">
             {t("selectHint")}
           </div>
         </div>

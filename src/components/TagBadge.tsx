@@ -18,7 +18,7 @@ export const TagBadge = ({ name, className = "", onClick }: TagBadgeProps) => {
         }
       }}
       style={style}
-      className={`terminal-flicker px-2 py-0.5 border text-xs font-mono rounded-md uppercase tracking-tighter transition-all hover:brightness-125 cursor-pointer ${className}`}
+      className={`terminal-flicker px-2 py-0.5 border text-xs font-mono rounded-md uppercase tracking-tighter transition-all hover:brightness-125 cursor-pointer shadow-[0_0_10px_rgba(0,0,0,0.1)] dark:shadow-none ${className}`}
     >
       $ {name}
     </span>

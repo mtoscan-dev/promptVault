@@ -14,6 +14,7 @@ import { classifyPrompt } from "@/utils/classification";
 import { TAG_COLORS } from "@/utils/styling";
 import { SystemErrorModal } from "@/components/SystemErrorModal";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Home() {
   const tCommon = useTranslations("Common");
@@ -267,9 +268,9 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 font-mono flex flex-col">
+    <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] font-mono flex flex-col">
       {/* Header */}
-      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-40">
+      <header className="border-b border-[var(--border-primary)] bg-[var(--bg-surface)]/50 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-1.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -317,7 +318,9 @@ export default function Home() {
                 })}
               </div>
               <div className="h-4 w-px bg-gray-800" />
+              <div className="h-4 w-px bg-gray-800" />
               <LocaleSwitcher />
+              <ThemeToggle />
               <button
                 onClick={handleNewPrompt}
                 className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded text-sm transition-colors cursor-pointer ml-2"
@@ -373,7 +376,7 @@ export default function Home() {
       </main>
 
       {/* Footer with terminal search */}
-      <footer className="border-t border-gray-800 bg-gray-900/80 backdrop-blur-sm sticky bottom-0 z-40">
+      <footer className="border-t border-[var(--border-primary)] bg-[var(--bg-surface)]/80 backdrop-blur-sm sticky bottom-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-1.5 space-y-1.5">
           {/* Row 1: Tags */}
           <div className="flex items-center gap-2 overflow-hidden">
