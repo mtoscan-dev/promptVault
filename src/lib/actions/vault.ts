@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { prompts } from "@/db/schema";
 import { generateEmbedding } from "@/lib/vectorize";
 import { Prompt } from "@/types";
-import { cosineDistance, desc, eq, sql } from "drizzle-orm";
+import { cosineDistance, desc, eq, sql, and, lt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function searchPrompts(query: string) {
@@ -20,7 +20,6 @@ export async function searchPrompts(query: string) {
 
       return mapDbPromptsToType(results);
     }
-
     // Semantic Search
     const queryEmbedding = await generateEmbedding(query);
     const similarity = sql<number>`1 - (${cosineDistance(prompts.embedding, queryEmbedding)})`;
@@ -41,7 +40,12 @@ export async function searchPrompts(query: string) {
         similarity,
       })
       .from(prompts)
-      .where(eq(prompts.type, "standard"))
+      .where(
+        and(
+          eq(prompts.type, "standard"),
+          lt(cosineDistance(prompts.embedding, queryEmbedding), 0.5), // Similarity > 0.5
+        ),
+      )
       .orderBy(desc(similarity))
       .limit(20);
 

@@ -99,7 +99,6 @@ export default function VaultPage() {
   useEffect(() => {
     const fetchPrompts = async () => {
       try {
-        // Initial load: fetch items without query (returns recent standard prompts)
         const data = await searchPrompts("");
         setPrompts(data);
       } catch (error) {
@@ -109,18 +108,17 @@ export default function VaultPage() {
     fetchPrompts();
   }, []);
 
-  // Search Logic (Debounced Semantic Search)
+  // Search Effect (Triggered when searchQuery updates)
   useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
+    const performSearch = async () => {
       try {
         const results = await searchPrompts(searchQuery);
         setPrompts(results);
       } catch (error) {
         console.error("Search failed:", error);
       }
-    }, 500); // 500ms debounce for typing
-
-    return () => clearTimeout(delayDebounceFn);
+    };
+    performSearch();
   }, [searchQuery]);
 
   // Handlers

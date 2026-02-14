@@ -81,9 +81,18 @@ export function TerminalSearch({
     }
   };
 
+  // Debounce logic
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onSearch(input);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [input, onSearch]);
+
   const handleInputChange = (value: string) => {
     setInput(value);
-    onSearch(value);
+    // onSearch(value); // Removed immediate call
   };
 
   return (
