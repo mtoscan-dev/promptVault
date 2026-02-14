@@ -3,21 +3,26 @@
   RUN apk add --no-cache libc6-compat
   WORKDIR /app
   
-  # Instalar pnpm de forma soberana
+  # Habilitar pnpm de forma soberana
   RUN corepack enable && corepack prepare pnpm@latest --activate
   
-  # Copiar archivos de manifiesto
+  # Copiar solo lo necesario para instalar
   COPY pnpm-lock.yaml package.json ./
-  # Instalación limpia para producción
-  RUN pnpm install --frozen-lockfile
+  
+  # EL TRUCO: Ignoramos scripts para que Next.js no busque la carpeta /src todavía
+  RUN pnpm install --frozen-lockfile --ignore-scripts
   
   # --- STAGE 2: La Forja (Construcción) ---
   FROM node:20-alpine AS builder
   WORKDIR /app
+  
+  # Traemos las dependencias del stage anterior
   COPY --from=deps /app/node_modules ./node_modules
+  
+  # AHORA SÍ: Copiamos todo el código fuente (incluyendo tu carpeta /src)
   COPY . .
   
-  # Desactivar telemetría de Next.js (Privacidad absoluta)
+  # Desactivar telemetría para privacidad total en la Patagonia
   ENV NEXT_TELEMETRY_DISABLED 1
   
   # Construir el búnker en modo standalone
@@ -31,11 +36,11 @@
   ENV NODE_ENV production
   ENV NEXT_TELEMETRY_DISABLED 1
   
-  # Crear usuario de sistema no-root por seguridad
   RUN addgroup --system --gid 1001 nodejs
   RUN adduser --system --uid 1001 nextjs
   
-  # Copiar solo lo esencial del output standalone
+  # Copiar el output standalone
+  # Nota: Next.js detectará automáticamente que usas /src y lo incluirá aquí
   COPY --from=builder /app/public ./public
   COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
   COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
@@ -44,7 +49,6 @@
   
   EXPOSE 3000
   ENV PORT 3000
-  # El host debe ser 0.0.0.0 para que Docker lo mapee correctamente
   ENV HOSTNAME "0.0.0.0"
   
   CMD ["node", "server.js"]

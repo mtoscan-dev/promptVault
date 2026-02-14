@@ -11,7 +11,7 @@ services:
       - ./postgres_data:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d:ro # Scripts de inicialización
     ports:
-      - "${DB_PORT}:5432"
+      - "${PORT_DB_EXTERNAL:-5433}:5432" # Redirige 5433 a 5432
     deploy:
       resources:
         limits:
@@ -50,7 +50,7 @@ services:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       OLLAMA_HOST: http://ollama:11434
     ports:
-      - "3000:3000"
+      - "${PORT_APP_EXTERNAL:-3080}:3000" # Redirige 3080 a 3000
     # Los volúmenes solo son necesarios en desarrollo (Hot Reload)
     # En producción (standalone) Docker los ignora si el archivo no los usa
     volumes:

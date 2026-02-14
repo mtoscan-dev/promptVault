@@ -40,7 +40,7 @@ export function BunkerHeader() {
           </div>
 
           {/* HUD Navigation */}
-          <div className="flex-1 max-w-2xl px-4">
+          <div className="flex-1 max-w-4xl px-4">
             <BunkerHUD />
           </div>
 
