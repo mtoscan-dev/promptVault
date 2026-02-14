@@ -40,62 +40,25 @@ interface ForgeContextValue extends ForgeState {
 
 const ForgeContext = createContext<ForgeContextValue | undefined>(undefined);
 
-// Mock Data
-const MOCK_PERSONAS: ForgePersona[] = [
-  {
-    id: "patagonia-1",
-    name: "Patagonia Architect",
-    version: "v1.0",
-    description: "Expert in resilient cloud architectures.",
-    instructions:
-      "Role: Senior Cloud Architect specializing in high-availability systems. Style: Concise, technical, and focused on reliability.",
-  },
-  {
-    id: "frontend-enhancer",
-    name: "Frontend Enhancer",
-    version: "v2.0",
-    description: "Specialist in premium UI/UX.",
-    instructions:
-      "Role: Expert Frontend Engineer. Focus: Accessibility, animations, and visual excellence using Tailwind.",
-  },
-];
+// Mocks removed - data comes from props
 
-const MOCK_SKILLS: ForgeSkill[] = [
-  {
-    id: "nextjs-opt",
-    name: "NextJS_RAM_Optimizer",
-    description: "Optimizes Next.js memory usage.",
-    instructions:
-      "Skill: Analyze code for memory leaks and optimize server-side rendering performance.",
-  },
-  {
-    id: "claude-code",
-    name: "ClaudeCode_Patterns",
-    description: "Technical logic for Claude Code CLI.",
-    instructions:
-      "Skill: Adhere to Claude Code architectural patterns and CLI best practices.",
-  },
-];
+interface ForgeProviderProps {
+  children: React.ReactNode;
+  initialData: {
+    personas: ForgePersona[];
+    skills: ForgeSkill[];
+    rules: ForgeRule[];
+  };
+}
 
-const MOCK_RULES: ForgeRule[] = [
-  {
-    id: "white-hat",
-    name: "White_Hat_Standard",
-    description: "Security-first compliance.",
-    instructions:
-      "Rule: All code MUST follow OWASP Top 10 security guidelines.",
-  },
-  {
-    id: "clean-code",
-    name: "Clean_Code_Architecture",
-    description: "Strict adherence to DRY and SOLID.",
-    instructions: "Rule: Follow SOLID principles and maintain high DRY scores.",
-  },
-];
+export const ForgeProvider = ({
+  children,
+  initialData,
+}: ForgeProviderProps) => {
+  const { personas, skills, rules } = initialData;
 
-export const ForgeProvider = ({ children }: { children: React.ReactNode }) => {
   const [activePersonaId, setActivePersonaId] = useState<string | null>(
-    MOCK_PERSONAS[0].id,
+    personas[0]?.id || null,
   );
   const [activeSkillIds, setActiveSkillIds] = useState<string[]>([]);
   const [activeRuleIds, setActiveRuleIds] = useState<string[]>([]);
@@ -129,26 +92,77 @@ export const ForgeProvider = ({ children }: { children: React.ReactNode }) => {
     setMetrics({ tps: 0, latency: 0 });
   }, []);
 
+  // Real-time inference using Server Action
   const executeInference = useCallback(async () => {
     if (!userInput.trim()) return;
 
     setIsCompiling(true);
     resetOutput();
 
-    // Simulating Ollama streaming
-    const mockResponse =
-      "PROMPT GENERATED > Executing operation with defined constraints...\n\nAnalyzing system architecture...\nOptimizing resource allocation...\nOperation complete.";
-    const chunks = mockResponse.split("");
+    const start = Date.now();
+    let tokenCount = 0;
 
-    setMetrics({ tps: 12.4, latency: 140 });
+    try {
+      // Construct messages context based on active items
+      const activePersona = personas.find((p) => p.id === activePersonaId);
+      const activeSkills = skills.filter((s) => activeSkillIds.includes(s.id));
+      const activeRules = rules.filter((r) => activeRuleIds.includes(r.id));
 
-    for (let i = 0; i < chunks.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 30));
-      setOutputStream((prev) => prev + chunks[i]);
+      const systemContext = `
+        ${activePersona ? `IDENTITY:\n${activePersona.instructions}\n` : ""}
+        ${activeSkills.length > 0 ? `SKILLS:\n${activeSkills.map((s) => s.instructions).join("\n")}\n` : ""}
+        ${activeRules.length > 0 ? `GOVERNANCE:\n${activeRules.map((r) => r.instructions).join("\n")}\n` : ""}
+      `;
+
+      const messages = [
+        { role: "system", content: systemContext },
+        { role: "user", content: userInput },
+      ];
+
+      // Call Server Action
+      const response = await import("@/app/actions/forge-ai").then((mod) =>
+        mod.streamForgeResponse(messages),
+      );
+
+      // Handle stream
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response stream");
+
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        setOutputStream((prev) => prev + chunk);
+        tokenCount++;
+
+        // Update metrics live
+        const elapsed = Date.now() - start;
+        setMetrics({
+          tps: Math.round((tokenCount / (elapsed / 1000)) * 10) / 10,
+          latency: elapsed,
+        });
+      }
+    } catch (error) {
+      console.error("Inference failed:", error);
+      setOutputStream(
+        (prev) => prev + `\n\n[SYSTEM ERROR]: Inference failed. check logs.`,
+      );
+    } finally {
+      setIsCompiling(false);
     }
-
-    setIsCompiling(false);
-  }, [userInput, resetOutput]);
+  }, [
+    userInput,
+    resetOutput,
+    activePersonaId,
+    activeSkillIds,
+    activeRuleIds,
+    personas,
+    skills,
+    rules,
+  ]);
 
   const value = useMemo(
     () => ({
@@ -165,9 +179,9 @@ export const ForgeProvider = ({ children }: { children: React.ReactNode }) => {
       setUserInput,
       executeInference,
       resetOutput,
-      availablePersonas: MOCK_PERSONAS,
-      availableSkills: MOCK_SKILLS,
-      availableRules: MOCK_RULES,
+      availablePersonas: personas,
+      availableSkills: skills,
+      availableRules: rules,
     }),
     [
       activePersonaId,
@@ -182,6 +196,9 @@ export const ForgeProvider = ({ children }: { children: React.ReactNode }) => {
       toggleRule,
       executeInference,
       resetOutput,
+      personas,
+      skills,
+      rules,
     ],
   );
 

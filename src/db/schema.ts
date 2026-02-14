@@ -27,17 +27,34 @@ export const govTypeEnum = pgEnum("gov_type", [
   "tool_config",
 ]);
 
-// Tabla de Prompts & Skills
+// Tabla de Prompts (Vault Knowledge)
 export const prompts = pgTable("prompts", {
   id: uuid("id").primaryKey().defaultRandom(),
   type: promptTypeEnum("type").default("standard").notNull(),
-  title: text("title").notNull(),
+
+  // Bilingual Titles
+  titleEs: text("title_es").notNull(),
+  titleEn: text("title_en").notNull(),
+
+  // Bilingual Descriptions (Optimized for semantic search)
+  descriptionEs: text("description_es").notNull(),
+  descriptionEn: text("description_en").notNull(),
+
+  // Content & Versioning
+  content: text("content").notNull(), // Current version content
+  version: integer("version").default(1).notNull(),
+  versions: jsonb("versions").default([]).notNull(), // History of changes
+
+  // Metadata
+  tags: text("tags").array().default([]).notNull(),
   domain: varchar("domain", { length: 100 }),
-  promptEs: text("prompt_es").notNull(),
-  promptEn: text("prompt_en").notNull(),
+
+  // RAG Vectors (768 dim for nomic-embed-text)
   embedding: vector("embedding"),
-  // Aquí guardamos CLI_Prefix, Input_Schema y metadata de Claude Code
+
+  // Tech Metadata (CLI usage)
   metadata: jsonb("metadata").default({}).notNull(),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

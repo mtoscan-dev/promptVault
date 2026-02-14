@@ -32,10 +32,12 @@ services:
       - ./ollama_data:/root/.ollama
     ports:
       - "${OLLAMA_PORT}:11434"
+    environment:
+      - OLLAMA_KEEP_ALIVE=30m # El modelo se queda en RAM por 30 minutos tras el último uso
     deploy:
       resources:
         limits:
-          memory: 2.5G # Espacio para Qwen 2.5 y Embeddings
+          memory: ${AI_MEM_LIMIT:-4G} # Espacio para Qwen 2.5 y Embeddings
     networks:
       - vault_network
 
@@ -62,8 +64,12 @@ services:
         limits:
           memory: ${APP_MEM_LIMIT:-1G}
     depends_on:
-      - db
-      - ollama
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    networks:
+      - vault_network
 
   # Gateway Nginx
   nginx:
