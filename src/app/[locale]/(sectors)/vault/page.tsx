@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { Plus, Terminal, Database, GitBranch } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { TerminalSearch } from "@/components/TerminalSearch";
 import { TagCloud } from "@/components/TagCloud";
@@ -19,6 +20,10 @@ export default function VaultPage() {
   const tCommon = useTranslations("Common");
   const tErrors = useTranslations("Errors");
   const tSystem = useTranslations("System");
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -248,6 +253,24 @@ export default function VaultPage() {
     );
   }, []);
 
+  const handleCommand = useCallback(
+    (command: string) => {
+      if (command === "new" || command === "add") {
+        handleNewPrompt();
+      }
+    },
+    [handleNewPrompt],
+  );
+
+  // URL Param Listener
+  useEffect(() => {
+    if (searchParams.get("new") === "true") {
+      handleNewPrompt();
+      // Clear param without reload
+      router.replace(pathname);
+    }
+  }, [searchParams, pathname, router, handleNewPrompt]);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Main content */}
@@ -307,16 +330,19 @@ export default function VaultPage() {
             />
           </div>
 
-          {/* Row 2: Terminal Search */}
-          <div className="bg-black/50 border border-gray-700 rounded px-3 py-1.5">
-            <TerminalSearch
-              tags={tags}
-              selectedTags={selectedTags}
-              placeholder={tCommon("searchPlaceholder")}
-              onSearch={handleSearch}
-              onTagSelect={handleTagSelect}
-              onTagRemove={handleTagRemove}
-            />
+          {/* Row 2: Terminal Search + Actions */}
+          <div className="flex gap-2 items-center">
+            <div className="bg-black/50 border border-gray-700 rounded px-3 py-1.5 flex-1">
+              <TerminalSearch
+                tags={tags}
+                selectedTags={selectedTags}
+                placeholder={tCommon("searchPlaceholder")}
+                onSearch={handleSearch}
+                onTagSelect={handleTagSelect}
+                onTagRemove={handleTagRemove}
+                onCommand={handleCommand}
+              />
+            </div>
           </div>
         </div>
       </footer>

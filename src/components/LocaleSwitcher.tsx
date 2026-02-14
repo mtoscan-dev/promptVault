@@ -17,7 +17,7 @@ export function LocaleSwitcher() {
   return (
     <button
       onClick={toggleLocale}
-      className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded text-xs font-mono transition-colors cursor-pointer border border-gray-700"
+      className="flex items-center gap-2 px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded text-xs font-mono transition-colors cursor-pointer border border-gray-700"
       title={locale === "es" ? "Switch to English" : "Cambiar a Español"}
     >
       <Languages size={14} className="text-blue-400" />

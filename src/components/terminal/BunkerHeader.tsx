@@ -7,9 +7,13 @@ import { SystemStats } from "./SystemStats";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import Link from "next/link";
+import { Plus } from "lucide-react";
+import { useParams } from "next/navigation";
 
 export function BunkerHeader() {
   const t = useTranslations("Common");
+  const params = useParams();
+  const locale = params?.locale || "en";
 
   return (
     <header className="border-b border-(--border-primary) bg-(--bg-surface)/50 backdrop-blur-sm sticky top-0 z-40">
@@ -46,6 +50,20 @@ export function BunkerHeader() {
 
           {/* Controls */}
           <div className="flex items-center gap-3">
+            <Link
+              href={`/${locale}/vault?new=true`}
+              className="flex items-center gap-2 px-3 py-1 bg-green-600/10 hover:bg-green-600/20 text-green-400 border border-green-600/30 rounded transition-colors group"
+              title={t("newPrompt")}
+            >
+              <Plus
+                size={14}
+                className="group-hover:scale-110 transition-transform"
+              />
+              <span className="text-[10px] font-mono hidden sm:inline font-bold uppercase tracking-wider">
+                {t("prompt")}
+              </span>
+            </Link>
+            <div className="h-4 w-px bg-gray-700 mx-1" />
             <LocaleSwitcher />
             <ThemeToggle />
           </div>

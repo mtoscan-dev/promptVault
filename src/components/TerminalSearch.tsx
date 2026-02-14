@@ -12,6 +12,7 @@ interface TerminalSearchProps {
   onSearch: (query: string) => void;
   onTagSelect: (tag: string) => void;
   onTagRemove: (tag: string) => void;
+  onCommand?: (command: string) => void;
 }
 
 export function TerminalSearch({
@@ -21,6 +22,7 @@ export function TerminalSearch({
   onSearch,
   onTagSelect,
   onTagRemove,
+  onCommand,
 }: TerminalSearchProps) {
   const t = useTranslations("Terminal");
   const [input, setInput] = useState("");
@@ -77,7 +79,13 @@ export function TerminalSearch({
       onTagRemove(selectedTags[selectedTags.length - 1]);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      onSearch(input);
+      // Check for commands
+      if (onCommand && (input.trim() === "new" || input.trim() === "add")) {
+        onCommand(input.trim());
+        setInput("");
+      } else {
+        onSearch(input);
+      }
     }
   };
 

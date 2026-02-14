@@ -6,6 +6,7 @@
     "versions": "<b>{count}</b> versiones",
     "found": "<b>{count}</b> encontrados",
     "newPrompt": "Nuevo Prompt",
+    "prompt": "Prompt",
     "tags": "ETIQUETAS",
     "searchPlaceholder": "Escribe para buscar... [ESPACIO] para etiqueta • [ENTER] para filtrar",
     "searchAction": "BUSCAR",

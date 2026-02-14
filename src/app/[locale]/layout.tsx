@@ -47,7 +47,10 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased font-mono bg-(--bg-page) text-(--text-primary) min-h-screen flex flex-col">
+      <body
+        className="antialiased font-mono bg-(--bg-page) text-(--text-primary) min-h-screen flex flex-col"
+        suppressHydrationWarning
+      >
         <NextIntlClientProvider messages={messages}>
           <BunkerHeader />
           <main className="flex-1 flex flex-col overflow-hidden relative">
