@@ -4,6 +4,7 @@ export interface ForgePersona {
   version: string;
   description: string;
   instructions: string;
+  avatarUrl?: string;
 }
 
 export interface ForgeSkill {

@@ -13,13 +13,14 @@ import { initialPrompts } from "@/data/mock";
 import { classifyPrompt } from "@/utils/classification";
 import { TAG_COLORS } from "@/utils/styling";
 import { SystemErrorModal } from "@/components/SystemErrorModal";
+import { searchPrompts, savePrompt } from "@/lib/actions/vault";
 
 export default function VaultPage() {
   const tCommon = useTranslations("Common");
   const tErrors = useTranslations("Errors");
   const tSystem = useTranslations("System");
 
-  const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts);
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -94,32 +95,51 @@ export default function VaultPage() {
     return () => window.removeEventListener("paste", handlePaste);
   }, [tSystem]);
 
-  // Search Logic
-  const filteredPrompts = prompts.filter((prompt) => {
-    if (selectedTags.length > 0) {
-      const hasAllTags = selectedTags.every((tag) => prompt.tags.includes(tag));
-      if (!hasAllTags) return false;
-    }
+  // Fetch Prompts (Load standard prompts on mount)
+  useEffect(() => {
+    const fetchPrompts = async () => {
+      try {
+        // Initial load: fetch items without query (returns recent standard prompts)
+        const data = await searchPrompts("");
+        setPrompts(data);
+      } catch (error) {
+        console.error("Failed to load prompts:", error);
+      }
+    };
+    fetchPrompts();
+  }, []);
 
-    const lowerQuery = searchQuery.toLowerCase().trim();
-    if (!lowerQuery) return true;
+  // Search Logic (Debounced Semantic Search)
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const results = await searchPrompts(searchQuery);
+        setPrompts(results);
+      } catch (error) {
+        console.error("Search failed:", error);
+      }
+    }, 500); // 500ms debounce for typing
 
-    const currentVersion = prompt.versions.find(
-      (v) => v.id === prompt.currentVersionId,
-    );
-    const content = currentVersion?.content || "";
-
-    return (
-      prompt.title.toLowerCase().includes(lowerQuery) ||
-      prompt.description.toLowerCase().includes(lowerQuery) ||
-      content.toLowerCase().includes(lowerQuery)
-    );
-  });
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   // Handlers
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
   }, []);
+
+  // Filter local state based on tags (Client-side filtering of Server-side results)
+  const filteredPrompts = useMemo(() => {
+    return prompts.filter((prompt) => {
+      if (selectedTags.length > 0) {
+        const hasAllTags = selectedTags.every((tag) =>
+          prompt.tags.includes(tag),
+        );
+        if (!hasAllTags) return false;
+      }
+      return true;
+    });
+  }, [prompts, selectedTags]);
 
   const handleTagSelect = useCallback((tag: string) => {
     setSelectedTags((prev) => (prev.includes(tag) ? prev : [...prev, tag]));
@@ -140,6 +160,7 @@ export default function VaultPage() {
   }, []);
 
   const handleCardTagAdd = useCallback((promptId: string, tag: string) => {
+    // Optimistic update
     setPrompts((prev) =>
       prev.map((prompt) =>
         prompt.id === promptId
@@ -152,6 +173,7 @@ export default function VaultPage() {
           : prompt,
       ),
     );
+    // TODO: Persist tag add
   }, []);
 
   const handleCardTagRemove = useCallback((promptId: string, tag: string) => {
@@ -162,6 +184,7 @@ export default function VaultPage() {
           : prompt,
       ),
     );
+    // TODO: Persist tag remove
   }, []);
 
   const handlePromptSelect = useCallback((prompt: Prompt) => {
@@ -178,78 +201,40 @@ export default function VaultPage() {
   }, []);
 
   const handleSave = useCallback(
-    (
+    async (
       id: string | null,
       content: string,
       title: string,
       description: string,
     ) => {
-      if (id) {
-        // Update existing
-        setPrompts((prev) =>
-          prev.map((prompt) => {
-            if (prompt.id !== id) return prompt;
+      // Prepare data for server action
+      const promptData = {
+        id: id || undefined,
+        titleEs: title, // TODO: Add language selector in UI
+        titleEn: title,
+        descriptionEs: description,
+        descriptionEn: description,
+        content: content,
+        tags: classifyPrompt(content + " " + title + " " + description),
+      };
 
-            const newVersionId = uuidv4();
-            const newVersion: PromptVersion = {
-              id: newVersionId,
-              content,
-              createdAt: new Date(),
-              versionNumber: prompt.versions.length + 1,
-            };
+      const result = await savePrompt(promptData);
 
-            const autoTags = classifyPrompt(
-              content +
-                " " +
-                (title || prompt.title) +
-                " " +
-                (description || prompt.description),
-            );
-
-            return {
-              ...prompt,
-              title: title || prompt.title,
-              description: description || prompt.description,
-              tags: autoTags,
-              versions: [...prompt.versions, newVersion],
-              currentVersionId: newVersionId,
-              updatedAt: new Date(),
-            };
-          }),
-        );
+      if (result.success) {
+        const updated = await searchPrompts(searchQuery);
+        setPrompts(updated);
+        setIsEditorOpen(false);
       } else {
-        // Create new
-        const versionId = uuidv4();
-        const autoTags = classifyPrompt(
-          content + " " + title + " " + description,
-        );
-
-        const newPrompt: Prompt = {
-          id: uuidv4(),
-          title,
-          description,
-          tags: autoTags,
-          versions: [
-            {
-              id: versionId,
-              content,
-              createdAt: new Date(),
-              versionNumber: 1,
-            },
-          ],
-          currentVersionId: versionId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        setPrompts((prev) => [newPrompt, ...prev]);
+        setSystemError({ message: "Failed to save prompt" });
       }
     },
-    [],
+    [searchQuery],
   );
 
   const handleDelete = useCallback((id: string) => {
     if (confirm("Are you sure you want to delete this prompt?")) {
       setPrompts((prev) => prev.filter((p) => p.id !== id));
+      // TODO: Call delete action
     }
   }, []);
 
