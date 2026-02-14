@@ -29,7 +29,12 @@
     "content": "Prompt Content",
     "tags": "Tags (Auto-generated)",
     "versionHistory": "Version History",
-    "v": "v"
+    "v": "v",
+    "translate": "Translate",
+    "analyze": "Analyze",
+    "analyzing": "ANALYZING...",
+    "score": "SCORE",
+    "autoSuggest": "Auto-Suggest"
   },
   "PromptCard": {
     "copied": "Copied",

@@ -29,7 +29,12 @@
     "content": "Contenido del Prompt",
     "tags": "Etiquetas (Auto-generadas)",
     "versionHistory": "Historial de Versiones",
-    "v": "v"
+    "v": "v",
+    "translate": "Traducir",
+    "analyze": "Analizar",
+    "analyzing": "ANALIZANDO...",
+    "score": "PUNTAJE",
+    "autoSuggest": "Auto-Sugerir"
   },
   "PromptCard": {
     "copied": "Copiado",

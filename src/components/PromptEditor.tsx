@@ -1,6 +1,17 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { X, Save, GitBranch, Clock, ChevronDown, Plus } from "lucide-react";
+import {
+  X,
+  Save,
+  GitBranch,
+  Clock,
+  ChevronDown,
+  Plus,
+  Languages,
+  Sparkles,
+  Zap,
+  BarChart2,
+} from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { es, enUS } from "date-fns/locale";
 import { Prompt, PromptVersion } from "@/types";
@@ -37,6 +48,9 @@ export function PromptEditor({
   const [selectedVersion, setSelectedVersion] = useState<PromptVersion | null>(
     null,
   );
+  const [isAutoSuggestEnabled, setIsAutoSuggestEnabled] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<number | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     if (prompt) {
@@ -68,6 +82,35 @@ export function PromptEditor({
       onVersionSwitch(prompt.id, version.id);
     }
     setShowVersions(false);
+    setShowVersions(false);
+  };
+
+  const handleTranslate = () => {
+    // Mock translation logic
+    console.log("Translation requested");
+    // TODO: Implement actual translation
+  };
+
+  const handleAnalyze = () => {
+    setIsAnalyzing(true);
+    setAnalysisResult(null);
+
+    // Mock analysis delay
+    setTimeout(() => {
+      const mockScore = Math.floor(Math.random() * 40) + 60; // Random score 60-100
+      setAnalysisResult(mockScore);
+      setIsAnalyzing(false);
+    }, 1500);
+  };
+
+  const toggleAutoSuggest = () => {
+    setIsAutoSuggestEnabled(!isAutoSuggestEnabled);
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return "text-green-400 border-green-400";
+    if (score >= 70) return "text-yellow-400 border-yellow-400";
+    return "text-red-400 border-red-400";
   };
 
   const isNewPrompt = !prompt;
@@ -196,14 +239,102 @@ export function PromptEditor({
 
         {/* Footer */}
         <div className="flex items-center justify-between p-4 border-t border-(--border-primary)">
-          <div className="text-xs text-(--text-muted) font-mono lowercase opacity-60">
-            {hasChanges && (
-              <span className="text-yellow-600 dark:text-yellow-500">
-                ● {t("save")}?
-              </span>
-            )}
+          <div className="flex items-center gap-2 py-1 px-1 bg-black/20 rounded border border-white/5 overflow-x-auto">
+            <button
+              onClick={handleTranslate}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors whitespace-nowrap"
+              title={t("translate")}
+            >
+              <Languages size={14} className="text-blue-400" />
+              <span>{t("translate")}</span>
+            </button>
+
+            <div className="w-px h-4 bg-white/10" />
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleAnalyze}
+                disabled={isAnalyzing}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors whitespace-nowrap disabled:opacity-50"
+                title={t("analyze")}
+              >
+                <BarChart2 size={14} className="text-purple-400" />
+                <span>{t("analyze")}</span>
+              </button>
+
+              {/* Analysis Result */}
+              {(analysisResult !== null || isAnalyzing) && (
+                <div className="flex items-center gap-2 px-2 py-1 bg-black/40 rounded border border-white/10">
+                  {isAnalyzing ? (
+                    <span className="text-[10px] text-purple-400 animate-pulse font-mono">
+                      {t("analyzing")}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-[10px] text-gray-500 font-mono">
+                        {t("score")}:
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs font-bold font-mono",
+                          analysisResult &&
+                            (analysisResult >= 90
+                              ? "text-green-400"
+                              : analysisResult >= 70
+                                ? "text-yellow-400"
+                                : "text-red-400"),
+                        )}
+                      >
+                        {analysisResult}/100
+                      </span>
+                      {/* Simple progress bar */}
+                      <div className="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden ml-1">
+                        <div
+                          className={cn(
+                            "h-full transition-all duration-500",
+                            analysisResult &&
+                              (analysisResult >= 90
+                                ? "bg-green-500"
+                                : analysisResult >= 70
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"),
+                          )}
+                          style={{ width: `${analysisResult}%` }}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="w-px h-4 bg-white/10" />
+
+            <button
+              onClick={toggleAutoSuggest}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono rounded transition-colors whitespace-nowrap",
+                isAutoSuggestEnabled
+                  ? "text-yellow-400 bg-yellow-400/10 hover:bg-yellow-400/20"
+                  : "text-gray-400 hover:text-white hover:bg-white/5",
+              )}
+              title={t("autoSuggest")}
+            >
+              <Sparkles
+                size={14}
+                className={isAutoSuggestEnabled ? "fill-yellow-400" : ""}
+              />
+              <span>{t("autoSuggest")}</span>
+            </button>
           </div>
           <div className="flex items-center gap-2">
+            <div className="text-xs text-(--text-muted) font-mono lowercase opacity-60 mr-2">
+              {hasChanges && (
+                <span className="text-yellow-600 dark:text-yellow-500">
+                  ● {t("save")}?
+                </span>
+              )}
+            </div>
             <button
               onClick={onClose}
               className="px-4 py-2 text-sm font-mono text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-surface-hover) rounded transition-colors"

@@ -14,6 +14,7 @@ import { initialPrompts } from "@/data/mock";
 import { classifyPrompt } from "@/utils/classification";
 import { TAG_COLORS } from "@/utils/styling";
 import { SystemErrorModal } from "@/components/SystemErrorModal";
+import { VaultSkeleton } from "@/components/VaultSkeleton";
 import { searchPrompts, savePrompt } from "@/lib/actions/vault";
 
 export default function VaultPage() {
@@ -36,6 +37,7 @@ export default function VaultPage() {
   const [systemError, setSystemError] = useState<{ message: string } | null>(
     null,
   );
+  const [isLoading, setIsLoading] = useState(true);
 
   // Derive Tags
   useEffect(() => {
@@ -108,6 +110,8 @@ export default function VaultPage() {
         setPrompts(data);
       } catch (error) {
         console.error("Failed to load prompts:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchPrompts();
@@ -277,7 +281,9 @@ export default function VaultPage() {
       <main className="flex-1 overflow-auto">
         <div className="max-w-7xl mx-auto px-4 py-2">
           {/* Prompts grid */}
-          {filteredPrompts.length > 0 ? (
+          {isLoading ? (
+            <VaultSkeleton />
+          ) : filteredPrompts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredPrompts.map((prompt) => (
                 <PromptCard
