@@ -4,6 +4,7 @@ import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
+import { SettingsProvider } from "@/contexts/SettingsContext"; // [NEW]
 
 export const metadata: Metadata = {
   title: "PromptVault",
@@ -52,10 +53,12 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         <NextIntlClientProvider messages={messages}>
-          <BunkerHeader />
-          <main className="flex-1 flex flex-col overflow-hidden relative">
-            {children}
-          </main>
+          <SettingsProvider>
+            <BunkerHeader />
+            <main className="flex-1 flex flex-col overflow-hidden relative">
+              {children}
+            </main>
+          </SettingsProvider>
         </NextIntlClientProvider>
       </body>
     </html>

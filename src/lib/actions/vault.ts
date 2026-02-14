@@ -7,14 +7,29 @@ import { Prompt } from "@/types";
 import { cosineDistance, desc, eq, sql, and, lt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-export async function searchPrompts(query: string) {
+export async function searchPrompts(query: string, domain?: string) {
   try {
+    const filters = [];
+
+    // Default to standard if no domain is provided, but if domain is provided, rely on it
+    if (!domain) {
+      filters.push(eq(prompts.type, "standard"));
+    } else {
+      // Support "logic:*" wildcard-like behavior or specific "logic:claude"
+      // If domain ends with ':', treat as prefix search
+      if (domain.endsWith(":")) {
+        filters.push(sql`${prompts.domain} LIKE ${domain + "%"}`);
+      } else {
+        filters.push(eq(prompts.domain, domain));
+      }
+    }
+
     if (!query) {
-      // Return standard prompts sorted by date if no query
+      // Return sorted by date
       const results = await db
         .select()
         .from(prompts)
-        .where(eq(prompts.type, "standard"))
+        .where(and(...filters))
         .orderBy(desc(prompts.createdAt))
         .limit(50);
 
@@ -33,16 +48,18 @@ export async function searchPrompts(query: string) {
         descriptionEn: prompts.descriptionEn,
         content: prompts.content,
         tags: prompts.tags,
+        domain: prompts.domain,
         version: prompts.version,
         versions: prompts.versions,
         createdAt: prompts.createdAt,
         updatedAt: prompts.updatedAt,
+        metadata: prompts.metadata,
         similarity,
       })
       .from(prompts)
       .where(
         and(
-          eq(prompts.type, "standard"),
+          ...filters,
           lt(cosineDistance(prompts.embedding, queryEmbedding), 0.5), // Similarity > 0.5
         ),
       )
@@ -63,7 +80,11 @@ export async function savePrompt(data: {
   descriptionEs: string;
   descriptionEn: string;
   content: string;
+  contentEs?: string | null;
+  contentEn?: string | null;
   tags: string[];
+  domain?: string;
+  metadata?: Record<string, any>;
 }) {
   try {
     // Generate embedding for the new/updated content
@@ -84,6 +105,7 @@ export async function savePrompt(data: {
       history.push({
         id: crypto.randomUUID(),
         content: existing.content,
+        // Optional: snapshot bilingual content too if needed in version history
         version: existing.version,
         createdAt: new Date().toISOString(),
       });
@@ -96,7 +118,11 @@ export async function savePrompt(data: {
           descriptionEs: data.descriptionEs,
           descriptionEn: data.descriptionEn,
           content: data.content,
+          contentEs: data.contentEs,
+          contentEn: data.contentEn,
           tags: data.tags,
+          domain: data.domain,
+          metadata: data.metadata || existing.metadata,
           embedding,
           version: newVersion,
           versions: history,
@@ -106,13 +132,17 @@ export async function savePrompt(data: {
     } else {
       // Create new
       await db.insert(prompts).values({
-        type: "standard",
+        type: data.domain?.startsWith("logic") ? "skill" : "standard", // Simple heuristic inference
         titleEs: data.titleEs,
         titleEn: data.titleEn,
         descriptionEs: data.descriptionEs,
         descriptionEn: data.descriptionEn,
         content: data.content,
+        contentEs: data.contentEs,
+        contentEn: data.contentEn,
         tags: data.tags,
+        domain: data.domain || "vault:standard",
+        metadata: data.metadata || {},
         embedding,
         version: 1,
         versions: [],
@@ -134,6 +164,8 @@ function mapDbPromptsToType(dbPrompts: any[]): Prompt[] {
     title: p.titleEn, // Defaulting to English title for UI for now, or we could pass locale
     description: p.descriptionEn,
     tags: p.tags,
+    domain: p.domain,
+    metadata: p.metadata,
     versions: p.versions,
     currentVersionId: p.id, // Using prompt ID as current version ID for simplicity in UI matching
     createdAt: p.createdAt,
@@ -144,5 +176,7 @@ function mapDbPromptsToType(dbPrompts: any[]): Prompt[] {
     descriptionEs: p.descriptionEs,
     descriptionEn: p.descriptionEn,
     content: p.content,
+    contentEs: p.contentEs,
+    contentEn: p.contentEn,
   }));
 }

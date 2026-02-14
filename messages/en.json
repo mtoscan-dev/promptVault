@@ -55,5 +55,54 @@
     "errorTitle": "SYSTEM ERROR",
     "close": "[ TERMINATE_ERROR_LOG ]",
     "pasteError": "DATA_TYPE_MISMATCH: The intercepted broadcast contains non-textual fragments. Only plaintext packets can be ingested into the vault."
+  },
+  "Settings": {
+    "title": "System Configuration",
+    "accessLevel": "ACCESS_LEVEL: ADMIN",
+    "tabs": {
+      "general": "General",
+      "appearance": "Appearance",
+      "system": "System"
+    },
+    "sections": {
+      "core": "Core Settings",
+      "coreDesc": "Configure global application behavior.",
+      "visual": "Visual Interface",
+      "visualDesc": "Customize the look and feel of the terminal.",
+      "diagnostics": "System Diagnostics",
+      "diagnosticsDesc": "View system performance and versioning."
+    },
+    "fields": {
+      "language": "Language",
+      "languageDesc": "Select your preferred interface language.",
+      "exportLanguage": "Export / Copy Language",
+      "exportLanguageDesc": "Preferred language when copying prompts.",
+      "notifications": "Notifications",
+      "notificationsDesc": "Enable system alerts and sounds.",
+      "theme": "Theme",
+      "themeDesc": "Choose between Light and Dark modes.",
+      "reducedMotion": "Reduced Motion",
+      "reducedMotionDesc": "Minimize animations for performance."
+    },
+    "options": {
+      "original": "Original (As Written)",
+      "en": "English (Translate)",
+      "es": "Spanish (Translate)",
+      "fr": "French (Translate)",
+      "de": "German (Translate)",
+      "ja": "Japanese (Translate)",
+      "dark": "Dark",
+      "light": "Light"
+    },
+    "stats": {
+      "memory": "Memory Usage",
+      "latency": "API Latency",
+      "version": "Version",
+      "build": "Build"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "save": "Save Changes"
+    }
   }
 }

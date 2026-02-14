@@ -2,9 +2,10 @@ import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { es, enUS } from "date-fns/locale";
 import { useTranslations, useLocale } from "next-intl";
-import { GitBranch, Clock, Trash2, Edit3, Check } from "lucide-react";
+import { GitBranch, Clock, Trash2, Edit3, Check, Copy } from "lucide-react";
 import { Prompt } from "@/types";
 import { TagBadge } from "@/components/TagBadge";
+import { useSettings } from "@/contexts/SettingsContext";
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -36,6 +37,8 @@ export function PromptCard({
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
 
+  const { exportLanguage } = useSettings();
+
   const currentVersion = prompt.versions.find(
     (v) => v.id === prompt.currentVersionId,
   );
@@ -43,8 +46,39 @@ export function PromptCard({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(content);
+      let textToCopy = content;
+      let langTag = ""; // " [ES]", " [EN]"
+
+      // Logical Copy based on Export Preference
+      if (exportLanguage === "es") {
+        if (prompt.contentEs) {
+          textToCopy = prompt.contentEs;
+          langTag = " [ES]";
+        } else {
+          // User requested behavior: Copy original + Warning at the bottom
+          textToCopy = `${content}\n\n--------------------------------------------------\n[SYSTEM]: The prompt does not exist in the selected export language (${exportLanguage.toUpperCase()}).\n[SISTEMA]: El prompt no existe en el idioma de exportación seleccionado.`;
+          langTag = " [ORIGINAL]";
+        }
+      } else if (exportLanguage === "en") {
+        if (prompt.contentEn) {
+          textToCopy = prompt.contentEn;
+          langTag = " [EN]";
+        } else {
+          textToCopy = `${content}\n\n--------------------------------------------------\n[SYSTEM]: The prompt does not exist in the selected export language (EN).\n[SISTEMA]: El prompt no existe en el idioma de exportación seleccionado.`;
+          langTag = " [ORIGINAL]";
+        }
+      }
+      // Add other languages checks if we support storage for them later
+      // For now, if it's 'original' or unsupported storage lang, we default to content.
+
+      await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
+
+      // Update the toast message to reflect what happened
+      // We rely on the UI to show "Copied" but we can add the tag visually if we want
+      // For now the generic "Copied" is shown, but let's try to update the state to show language?
+      // The current UI just shows "Copied" icon or text.
+
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
@@ -78,7 +112,9 @@ export function PromptCard({
             <Check className="text-black" size={20} />
           </div>
           <span className="text-green-400 font-mono font-bold text-sm tracking-widest uppercase">
-            {t("copied")}
+            {t("copied")}{" "}
+            {exportLanguage !== "original" &&
+              `[${exportLanguage.toUpperCase()}]`}
           </span>
         </div>
       </div>
@@ -147,6 +183,28 @@ export function PromptCard({
           </p>
         </div>
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
+          {/* New Copy Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopy(); // Call handleCopy here
+            }}
+            className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors flex items-center" // Added flex items-center for text alignment
+            title={copied ? "Copied!" : "Copy to clipboard"}
+          >
+            {copied ? (
+              <Check size={14} className="text-green-400" />
+            ) : (
+              <Copy size={14} />
+            )}
+            {copied && (
+              <span className="ml-1 text-[10px] text-green-400 font-mono">
+                {exportLanguage !== "original"
+                  ? `[${exportLanguage.toUpperCase()}]`
+                  : ""}
+              </span>
+            )}
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();

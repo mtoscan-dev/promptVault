@@ -42,6 +42,8 @@ export const prompts = pgTable("prompts", {
 
   // Content & Versioning
   content: text("content").notNull(), // Current version content
+  contentEs: text("content_es"),
+  contentEn: text("content_en"),
   version: integer("version").default(1).notNull(),
   versions: jsonb("versions").default([]).notNull(), // History of changes
 

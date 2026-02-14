@@ -10,6 +10,8 @@ export interface Prompt {
   title: string;
   description: string;
   tags: string[];
+  contentEs?: string | null;
+  contentEn?: string | null;
   versions: PromptVersion[];
   currentVersionId: string;
   createdAt: Date;

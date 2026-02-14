@@ -41,7 +41,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="flex items-center gap-2 px-3 py-1 bg-gray-900 border border-gray-100 hover:border-green-600/50 hover:bg-gray-800 rounded text-xs font-mono transition-all group dark:bg-gray-950 dark:border-gray-800"
+      className="flex items-center gap-2 px-3 py-1 bg-gray-900 border border-gray-100 hover:border-green-600/50 hover:bg-gray-800 rounded text-xs font-mono transition-all group dark:bg-gray-950 dark:border-gray-800 whitespace-nowrap"
       title={theme === "dark" ? t("themeLight") : t("themeDark")}
     >
       {theme === "dark" ? (

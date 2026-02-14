@@ -11,11 +11,16 @@ import {
   Sparkles,
   Zap,
   BarChart2,
+  Copy,
+  RefreshCw,
+  Check,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { es, enUS } from "date-fns/locale";
+import { useSettings } from "@/contexts/SettingsContext";
 import { Prompt, PromptVersion } from "@/types";
 import { cn } from "@/utils/cn";
+import { translatePromptFields } from "@/app/actions/forge-ai";
 
 interface PromptEditorProps {
   prompt: Prompt | null;
@@ -26,6 +31,8 @@ interface PromptEditorProps {
     content: string,
     title: string,
     description: string,
+    contentEs?: string | null,
+    contentEn?: string | null,
   ) => void;
   onVersionSwitch: (promptId: string, versionId: string) => void;
 }
@@ -52,6 +59,11 @@ export function PromptEditor({
   const [analysisResult, setAnalysisResult] = useState<number | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  // Bilingual Content State
+  // We keep track of the specific language versions if they exist
+  const [contentEs, setContentEs] = useState<string | null>(null);
+  const [contentEn, setContentEn] = useState<string | null>(null);
+
   useEffect(() => {
     if (prompt) {
       setTitle(prompt.title);
@@ -61,17 +73,42 @@ export function PromptEditor({
       );
       setContent(currentVersion?.content || "");
       setSelectedVersion(currentVersion || null);
+
+      // Load existing bilingual content
+      setContentEs(prompt.contentEs || null);
+      setContentEn(prompt.contentEn || null);
     } else {
       setTitle("");
       setDescription("");
       setContent(initialContent || "");
       setSelectedVersion(null);
+      setContentEs(null);
+      setContentEn(null);
     }
   }, [prompt, initialContent]);
 
   const handleSave = () => {
     if (!title.trim() || !content.trim()) return;
-    onSave(prompt?.id || null, content, title, description);
+
+    // Final sync before save:
+    // If we are in "es" locale (or logic), we assume current UI is ES.
+    // If we are in "en", current UI is EN.
+    // However, the user might be editing EITHER.
+    // Lacking explicit language toggle in UI, we rely on the heuristic used in Translate.
+    // BUT, we should probably update the "current" one based on what we have.
+    // Actually, `content` is the MASTER. `contentEs/En` are valid translations.
+    // If I just translated to EN, `content` IS English. `contentEn` should be updated to `content`.
+    // We'll handle this sync inside handleTranslate mostly.
+    // Here we just pass what we have.
+
+    onSave(
+      prompt?.id || null,
+      content,
+      title,
+      description,
+      contentEs,
+      contentEn,
+    );
     onClose();
   };
 
@@ -82,13 +119,119 @@ export function PromptEditor({
       onVersionSwitch(prompt.id, version.id);
     }
     setShowVersions(false);
-    setShowVersions(false);
   };
 
-  const handleTranslate = () => {
-    // Mock translation logic
-    console.log("Translation requested");
-    // TODO: Implement actual translation
+  // Get User Preference
+  const { exportLanguage } = useSettings();
+
+  const handleTranslate = async () => {
+    // 1. Identify Preferred Language (User's Context)
+    // If exportLanguage is 'original', fall back to locale.
+    const preferredLang =
+      exportLanguage === "original" ? locale : exportLanguage;
+    const isEsPreferred = preferredLang === "es";
+
+    // 2. Identify Source and Target
+    // We assume the User is looking at/editing the "Source".
+    // Or, we check which buckets are available.
+
+    // Heuristic:
+    // If we have content in Preferred bucket, we treat that as source (User might have edited it).
+    // If Preferred bucket is empty, but we have the Other bucket, that Other is source.
+
+    let sourceContent = { title, description, content };
+    let targetLang: "es" | "en" = isEsPreferred ? "en" : "es"; // Default target is opposite of preferred
+
+    // Current State Check
+    const hasEs = !!(contentEs || (isEsPreferred && content)); // Simplified check
+    const hasEn = !!(contentEn || (!isEsPreferred && content));
+
+    // Gap Filling Logic
+    if (isEsPreferred) {
+      // Prefer Spanish.
+      if (hasEs && !hasEn) {
+        // Have ES, Missing EN -> Translate to EN
+        targetLang = "en";
+      } else if (!hasEs && hasEn) {
+        // Missing ES, Have EN -> Translate to ES
+        targetLang = "es";
+      } else if (hasEs && hasEn) {
+        // Have Both -> Assume we want to update the Translation form the Preferred (ES -> EN)
+        targetLang = "en";
+      }
+    } else {
+      // Prefer English/Other
+      if (hasEn && !hasEs) {
+        // Have EN, Missing ES -> Translate to ES
+        targetLang = "es";
+      } else if (!hasEn && hasEs) {
+        // Missing EN, Have ES -> Translate to EN
+        targetLang = "en";
+      } else if (hasEn && hasEs) {
+        // Have Both -> Update ES from EN
+        targetLang = "es";
+      }
+    }
+
+    // Determine Source Data based on Target
+    // If Target is ES, Source is EN.
+    if (targetLang === "es") {
+      // If we are currently viewing EN, take current state.
+      // If we are viewing ES (but generating ES?), that implies we are fixing ES.
+      // Let's assume current editor state IS the source content if it matches the source lang.
+      // BUT, checking "isEsPreferred" helps.
+      if (!isEsPreferred) {
+        // We are EN user, so current state is EN.
+        sourceContent = { title, description, content };
+      } else {
+        // We are ES user. If we are translating TO ES, it means we didn't have it.
+        // So current state MUST be EN (loaded fallback) or we look at contentEn var.
+        // Ideally use current state as it handles unsaved edits.
+        sourceContent = { title, description, content };
+      }
+    } else {
+      // Target is EN. Source is ES.
+      sourceContent = { title, description, content };
+    }
+
+    if (!sourceContent.title && !sourceContent.content) return;
+
+    setIsAnalyzing(true);
+
+    try {
+      const result = await translatePromptFields(sourceContent, targetLang);
+
+      if (result.success && result.data) {
+        // Save result to the correct bucket
+        if (targetLang === "es") {
+          setContentEs(result.data.content);
+          // Updating UI: "Show according to selected language"
+          // If preferred is ES, and we just generated ES, show it!
+          if (isEsPreferred) {
+            if (result.data.title) setTitle(result.data.title);
+            if (result.data.description)
+              setDescription(result.data.description);
+            if (result.data.content) setContent(result.data.content);
+          }
+        } else {
+          setContentEn(result.data.content);
+          // If preferred is EN, and we generated EN, show it.
+          if (!isEsPreferred) {
+            if (result.data.title) setTitle(result.data.title);
+            if (result.data.description)
+              setDescription(result.data.description);
+            if (result.data.content) setContent(result.data.content);
+          }
+        }
+        console.log(
+          `Translated to ${targetLang}. Displaying: ${isEsPreferred ? "ES" : "Non-ES"}`,
+        );
+      }
+    } catch (e) {
+      console.error("Translation failed", e);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleAnalyze = () => {

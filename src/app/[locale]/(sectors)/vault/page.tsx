@@ -213,6 +213,8 @@ export default function VaultPage() {
       content: string,
       title: string,
       description: string,
+      contentEs?: string | null,
+      contentEn?: string | null,
     ) => {
       // Prepare data for server action
       const promptData = {
@@ -222,6 +224,8 @@ export default function VaultPage() {
         descriptionEs: description,
         descriptionEn: description,
         content: content,
+        contentEs: contentEs,
+        contentEn: contentEn,
         tags: classifyPrompt(content + " " + title + " " + description),
       };
 
