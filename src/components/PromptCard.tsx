@@ -180,7 +180,10 @@ export function PromptCard({
       {/* Tags */}
       <div className="flex flex-wrap gap-1 mb-2">
         {prompt.tags.map((tag) => (
-          <div key={tag} className="relative z-50">
+          <div
+            key={tag}
+            className={`relative ${activeTagMenu === tag ? "z-50" : "z-10"}`}
+          >
             <TagBadge
               name={tag}
               onClick={() =>
@@ -220,7 +223,9 @@ export function PromptCard({
         ))}
 
         {/* Add Tag Button / Input */}
-        <div className="relative z-50 flex items-center">
+        <div
+          className={`relative flex items-center ${isAddingTag ? "z-50" : "z-10"}`}
+        >
           {isAddingTag ? (
             <div className="flex items-center bg-gray-900 border border-green-500/50 rounded px-1 animate-in fade-in zoom-in-95 duration-200">
               <span className="text-green-500 text-[10px] font-mono mr-1">
