@@ -16,7 +16,19 @@ type TabId = "general" | "appearance" | "system";
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<TabId>("general");
   const [mounted, setMounted] = useState(false);
-  const { exportLanguage, setExportLanguage } = useSettings();
+
+  // Use Context for Global State & Persistence
+  const {
+    exportLanguage,
+    setExportLanguage,
+    theme,
+    setTheme,
+    notifications,
+    toggleNotifications,
+    reducedMotion,
+    toggleReducedMotion,
+  } = useSettings();
+
   const t = useTranslations("Settings");
 
   useEffect(() => {
@@ -55,7 +67,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 {t("title")}
               </h2>
               <p className="text-[10px] text-white/50 font-mono tracking-widest">
-                {t("accessLevel")}
+                SOVEREIGN CONTROL CENTER
               </p>
             </div>
           </div>
@@ -138,7 +150,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     label={t("fields.notifications")}
                     description={t("fields.notificationsDesc")}
                   >
-                    <ToggleSwitch />
+                    <ToggleSwitch
+                      enabled={notifications}
+                      onToggle={toggleNotifications}
+                    />
                   </SettingRow>
                 </div>
               </div>
@@ -157,10 +172,16 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     description={t("fields.themeDesc")}
                   >
                     <div className="flex bg-black/40 rounded-lg p-1 border border-white/10 w-fit">
-                      <button className="px-3 py-1 rounded text-xs bg-white/10 text-white shadow-sm">
+                      <button
+                        onClick={() => setTheme("dark")}
+                        className={`px-3 py-1 rounded text-xs transition-colors shadow-sm ${theme === "dark" || theme === "system" ? "bg-white/10 text-white" : "text-white/50 hover:text-white"}`}
+                      >
                         {t("options.dark")}
                       </button>
-                      <button className="px-3 py-1 rounded text-xs text-white/50 hover:text-white transition-colors">
+                      <button
+                        onClick={() => setTheme("light")}
+                        className={`px-3 py-1 rounded text-xs transition-colors ${theme === "light" ? "bg-white/10 text-white" : "text-white/50 hover:text-white"}`}
+                      >
                         {t("options.light")}
                       </button>
                     </div>
@@ -170,7 +191,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     label={t("fields.reducedMotion")}
                     description={t("fields.reducedMotionDesc")}
                   >
-                    <ToggleSwitch />
+                    <ToggleSwitch
+                      enabled={reducedMotion}
+                      onToggle={toggleReducedMotion}
+                    />
                   </SettingRow>
                 </div>
               </div>
@@ -210,17 +234,17 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer - Modified: No Save Button */}
         <div className="p-4 border-t border-white/10 bg-black/40 flex justify-end gap-3">
+          <div className="mr-auto flex items-center gap-2 text-[10px] text-(--acc-primary) opacity-80">
+            <div className="w-1.5 h-1.5 rounded-full bg-(--acc-primary) animate-pulse" />
+            LIVE SYNC ACTIVE
+          </div>
           <button
             onClick={onClose}
             className="px-4 py-2 text-xs font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-md transition-colors"
           >
-            {t("actions.cancel")}
-          </button>
-          <button className="px-4 py-2 text-xs font-bold bg-(--acc-primary) text-black rounded-md hover:bg-(--acc-primary)/90 transition-colors flex items-center gap-2 shadow-[0_0_15px_-3px_var(--acc-primary)]">
-            <Save size={14} />
-            {t("actions.save")}
+            {t("actions.close")}
           </button>
         </div>
       </div>
@@ -301,11 +325,16 @@ function SettingRow({
   );
 }
 
-function ToggleSwitch() {
-  const [enabled, setEnabled] = useState(false);
+function ToggleSwitch({
+  enabled,
+  onToggle,
+}: {
+  enabled: boolean;
+  onToggle: () => void;
+}) {
   return (
     <button
-      onClick={() => setEnabled(!enabled)}
+      onClick={onToggle}
       className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-(--acc-primary) focus:ring-offset-2 focus:ring-offset-black ${
         enabled ? "bg-(--acc-primary)" : "bg-white/20"
       }`}

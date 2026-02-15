@@ -120,7 +120,7 @@ export function PromptCard({
       </div>
 
       <div
-        className={`absolute inset-0 z-30 flex items-center justify-center bg-gray-950/90 backdrop-blur-md transition-all duration-300 ${
+        className={`absolute inset-0 z-30 flex items-center justify-center bg-(--bg-surface)/95 backdrop-blur-md transition-all duration-300 ${
           showDeleteConfirm
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-4 pointer-events-none"
@@ -137,7 +137,7 @@ export function PromptCard({
                 e.stopPropagation();
                 setShowDeleteConfirm(false);
               }}
-              className="flex-1 py-1 px-2 border border-gray-700 hover:bg-gray-800 text-gray-400 text-[10px] font-mono uppercase tracking-wider transition-colors rounded"
+              className="flex-1 py-1 px-2 border border-(--border-primary) hover:bg-(--bg-surface-hover) text-(--text-secondary) hover:text-(--text-primary) text-[10px] font-mono uppercase tracking-wider transition-colors rounded"
             >
               {t("abort")}
             </button>
@@ -147,7 +147,7 @@ export function PromptCard({
                 onDelete(prompt.id);
                 setShowDeleteConfirm(false);
               }}
-              className="flex-1 py-1 px-2 bg-red-950/30 border border-red-900/50 hover:bg-red-900/50 text-red-500 text-[10px] font-mono uppercase tracking-wider transition-all rounded shadow-lg shadow-red-900/20"
+              className="flex-1 py-1 px-2 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-500 text-[10px] font-mono uppercase tracking-wider transition-all rounded shadow-lg shadow-red-500/10"
             >
               {t("exterminate")}
             </button>

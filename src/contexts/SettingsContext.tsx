@@ -1,45 +1,90 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { updateSetting } from "@/lib/actions/settings";
 
 export type ExportLanguage = "original" | "en" | "es" | "fr" | "de" | "ja";
 
 interface SettingsContextType {
   exportLanguage: ExportLanguage;
   setExportLanguage: (lang: ExportLanguage) => void;
-  // Future settings can go here
+  notifications: boolean;
+  toggleNotifications: () => void;
+  reducedMotion: boolean;
+  toggleReducedMotion: () => void;
+  theme: string;
+  setTheme: (theme: string) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
   undefined,
 );
 
-export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [exportLanguage, setExportLanguageState] =
-    useState<ExportLanguage>("original");
+export function SettingsProvider({
+  children,
+  initialSettings,
+}: {
+  children: React.ReactNode;
+  initialSettings?: any;
+}) {
+  const [exportLanguage, setExportLanguageState] = useState<ExportLanguage>(
+    initialSettings?.exportLanguage || "original",
+  );
+  const [notifications, setNotifications] = useState<boolean>(
+    initialSettings?.notifications ?? true,
+  );
+  const [reducedMotion, setReducedMotion] = useState<boolean>(
+    initialSettings?.reducedMotion ?? false,
+  );
+  const [theme, setTheme] = useState<string>(
+    initialSettings?.theme || "system",
+  );
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Load from localStorage on mount
-    const savedLang = localStorage.getItem(
-      "vault_export_language",
-    ) as ExportLanguage;
-    if (savedLang) {
-      setExportLanguageState(savedLang);
-    }
     setMounted(true);
   }, []);
 
-  const setExportLanguage = (lang: ExportLanguage) => {
+  const setExportLanguage = async (lang: ExportLanguage) => {
+    // Optimistic Update
     setExportLanguageState(lang);
-    localStorage.setItem("vault_export_language", lang);
+    await updateSetting("exportLanguage", lang);
+  };
+
+  const toggleNotifications = async () => {
+    const newValue = !notifications;
+    setNotifications(newValue);
+    await updateSetting("notifications", newValue);
+  };
+
+  const toggleReducedMotion = async () => {
+    const newValue = !reducedMotion;
+    setReducedMotion(newValue);
+    await updateSetting("reducedMotion", newValue);
+  };
+
+  const setThemePreference = async (newTheme: string) => {
+    setTheme(newTheme);
+    await updateSetting("theme", newTheme);
   };
 
   // Prevent hydration mismatch by not rendering until mounted if needed,
   // currently we just provide default.
 
   return (
-    <SettingsContext.Provider value={{ exportLanguage, setExportLanguage }}>
+    <SettingsContext.Provider
+      value={{
+        exportLanguage,
+        setExportLanguage,
+        notifications,
+        toggleNotifications,
+        reducedMotion,
+        toggleReducedMotion,
+        theme,
+        setTheme: setThemePreference,
+      }}
+    >
       {children}
     </SettingsContext.Provider>
   );

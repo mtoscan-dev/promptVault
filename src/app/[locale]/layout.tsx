@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 import { SettingsProvider } from "@/contexts/SettingsContext"; // [NEW]
+import { getSettings } from "@/lib/actions/settings";
 
 export const metadata: Metadata = {
   title: "PromptVault",
@@ -31,6 +32,8 @@ export default async function RootLayout({
   // side is the easiest way to get started
   const messages = await getMessages();
 
+  const settings = await getSettings();
+
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
@@ -38,7 +41,7 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                if ('${settings.theme}' === 'dark' || (!('${settings.theme}' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                   document.documentElement.classList.add('dark')
                 } else {
                   document.documentElement.classList.remove('dark')
@@ -53,7 +56,7 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         <NextIntlClientProvider messages={messages}>
-          <SettingsProvider>
+          <SettingsProvider initialSettings={settings}>
             <BunkerHeader />
             <main className="flex-1 flex flex-col overflow-hidden relative">
               {children}

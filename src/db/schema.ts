@@ -9,6 +9,7 @@ import {
   jsonb,
   pgEnum,
   customType,
+  boolean,
 } from "drizzle-orm/pg-core";
 
 // Helper para pgvector (Ajustado a 768 dimensiones para modelos como Nomic o Qwen)
@@ -81,4 +82,26 @@ export const governance = pgTable("governance", {
   content: text("content").notNull(), // Markdown
   fileName: varchar("file_name", { length: 255 }), // e.g. .cursorrules
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Tabla de Settings (Singleton - ID 1)
+export const settings = pgTable("settings", {
+  id: integer("id").primaryKey().default(1),
+
+  // General
+  language: text("language").default("en"),
+  exportLanguage: text("export_language").default("original"),
+
+  // Visuals
+  theme: text("theme").default("system"),
+  reducedMotion: boolean("reduced_motion").default(false),
+
+  // Advanced
+  notifications: boolean("notifications").default(true),
+  developerMode: boolean("developer_mode").default(false),
+
+  // Metadata for future extensibility
+  metadata: jsonb("metadata").default({}).notNull(),
+
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
