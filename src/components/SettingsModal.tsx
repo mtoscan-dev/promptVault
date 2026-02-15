@@ -5,6 +5,7 @@ import { X, Monitor, Sliders, Cpu, Save } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useTranslations } from "next-intl";
+import { useRouter, usePathname } from "@/i18n/routing";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -21,6 +22,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const {
     exportLanguage,
     setExportLanguage,
+    language,
+    setLanguage,
     theme,
     setTheme,
     notifications,
@@ -43,6 +46,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       document.body.style.overflow = "unset";
     };
   }, [isOpen]);
+
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleLanguageChange = (newLang: "en" | "es") => {
+    setLanguage(newLang);
+    router.replace(pathname, { locale: newLang });
+  };
 
   if (!mounted || !isOpen) return null;
 
@@ -122,9 +133,15 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     label={t("fields.language")}
                     description={t("fields.languageDesc")}
                   >
-                    <select className="bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:border-(--acc-primary) outline-none transition-colors">
-                      <option>English (US)</option>
-                      <option>Español</option>
+                    <select
+                      value={language}
+                      onChange={(e) =>
+                        handleLanguageChange(e.target.value as "en" | "es")
+                      }
+                      className="bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:border-(--acc-primary) outline-none transition-colors"
+                    >
+                      <option value="en">English (US)</option>
+                      <option value="es">Español</option>
                     </select>
                   </SettingRow>
 

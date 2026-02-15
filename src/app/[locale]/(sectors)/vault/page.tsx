@@ -215,14 +215,19 @@ export default function VaultPage() {
       description: string,
       contentEs?: string | null,
       contentEn?: string | null,
+      titleEs?: string | null,
+      titleEn?: string | null,
+      descriptionEs?: string | null,
+      descriptionEn?: string | null,
     ) => {
       // Prepare data for server action
       const promptData = {
         id: id || undefined,
-        titleEs: title, // TODO: Add language selector in UI
-        titleEn: title,
-        descriptionEs: description,
-        descriptionEn: description,
+        // Use specific language version if available, otherwise fallback to current UI value
+        titleEs: titleEs || title,
+        titleEn: titleEn || title,
+        descriptionEs: descriptionEs || description,
+        descriptionEn: descriptionEn || description,
         content: content,
         contentEs: contentEs,
         contentEn: contentEn,

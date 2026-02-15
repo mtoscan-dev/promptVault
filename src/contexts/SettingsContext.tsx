@@ -8,6 +8,8 @@ export type ExportLanguage = "original" | "en" | "es" | "fr" | "de" | "ja";
 interface SettingsContextType {
   exportLanguage: ExportLanguage;
   setExportLanguage: (lang: ExportLanguage) => void;
+  language: "en" | "es";
+  setLanguage: (lang: "en" | "es") => void;
   notifications: boolean;
   toggleNotifications: () => void;
   reducedMotion: boolean;
@@ -30,6 +32,9 @@ export function SettingsProvider({
   const [exportLanguage, setExportLanguageState] = useState<ExportLanguage>(
     initialSettings?.exportLanguage || "original",
   );
+  const [language, setLanguageState] = useState<"en" | "es">(
+    initialSettings?.language || "en",
+  );
   const [notifications, setNotifications] = useState<boolean>(
     initialSettings?.notifications ?? true,
   );
@@ -45,6 +50,11 @@ export function SettingsProvider({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const setLanguage = async (lang: "en" | "es") => {
+    setLanguageState(lang);
+    await updateSetting("language", lang);
+  };
 
   const setExportLanguage = async (lang: ExportLanguage) => {
     // Optimistic Update
@@ -77,6 +87,8 @@ export function SettingsProvider({
       value={{
         exportLanguage,
         setExportLanguage,
+        language,
+        setLanguage,
         notifications,
         toggleNotifications,
         reducedMotion,

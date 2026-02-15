@@ -20,7 +20,10 @@ import { es, enUS } from "date-fns/locale";
 import { useSettings } from "@/contexts/SettingsContext";
 import { Prompt, PromptVersion } from "@/types";
 import { cn } from "@/utils/cn";
-import { translatePromptFields } from "@/app/actions/forge-ai";
+import {
+  translatePromptFields,
+  generatePromptMetadata,
+} from "@/app/actions/forge-ai";
 
 interface PromptEditorProps {
   prompt: Prompt | null;
@@ -33,6 +36,10 @@ interface PromptEditorProps {
     description: string,
     contentEs?: string | null,
     contentEn?: string | null,
+    titleEs?: string | null,
+    titleEn?: string | null,
+    descriptionEs?: string | null,
+    descriptionEn?: string | null,
   ) => void;
   onVersionSwitch: (promptId: string, versionId: string) => void;
 }
@@ -44,6 +51,7 @@ export function PromptEditor({
   onSave,
   onVersionSwitch,
 }: PromptEditorProps) {
+  const { exportLanguage } = useSettings();
   const t = useTranslations("Editor");
   const locale = useLocale();
   const dateLocale = locale === "es" ? es : enUS;
@@ -64,19 +72,127 @@ export function PromptEditor({
   const [contentEs, setContentEs] = useState<string | null>(null);
   const [contentEn, setContentEn] = useState<string | null>(null);
 
+  // Bilingual Metadata State
+  const [titleEs, setTitleEs] = useState<string | null>(null);
+  const [titleEn, setTitleEn] = useState<string | null>(null);
+  const [descriptionEs, setDescriptionEs] = useState<string | null>(null);
+  const [descriptionEn, setDescriptionEn] = useState<string | null>(null);
+  // Auto-Suggest Logic
+  const [isGeneratingMetadata, setIsGeneratingMetadata] = useState(false);
+  const [lastPasteTime, setLastPasteTime] = useState(0);
+
+  useEffect(() => {
+    if (!isAutoSuggestEnabled || !content.trim()) return;
+
+    // If Auto-Suggest is ENABLED, we generate regardless of whether fields are empty.
+    // The user explicitly turned it on.
+
+    const isPaste = Date.now() - lastPasteTime < 500; // 500ms window to catch the update after paste
+    const delay = isPaste ? 0 : 1500;
+
+    const timer = setTimeout(async () => {
+      setIsGeneratingMetadata(true);
+      console.log("[PromptEditor] Auto-Suggesting metadata...");
+
+      try {
+        // Determine language for metadata
+        const preferredLang =
+          exportLanguage === "original" ? locale : exportLanguage;
+
+        // Timeout Promise (120s)
+        const timeoutPromise = new Promise<{
+          success: boolean;
+          data?: any;
+          error?: string;
+        }>((_, reject) => {
+          setTimeout(() => reject(new Error("Auto-Suggest timed out")), 120000);
+        });
+
+        // Race
+        const result = await Promise.race([
+          generatePromptMetadata(content, preferredLang),
+          timeoutPromise,
+        ]);
+
+        if (result.success && result.data) {
+          console.log("[PromptEditor] Auto-Suggest success:", result.data);
+          setTitle(result.data.title);
+          setDescription(result.data.description);
+        }
+      } catch (error) {
+        console.error("[PromptEditor] Auto-Suggest failed:", error);
+      } finally {
+        setIsGeneratingMetadata(false);
+      }
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [
+    content,
+    isAutoSuggestEnabled,
+    title,
+    description,
+    lastPasteTime,
+    exportLanguage,
+    locale,
+  ]);
+
+  // Get User Preference
+  console.log(
+    "[PromptEditor] Locale:",
+    locale,
+    "ExportLanguage:",
+    exportLanguage,
+  );
+
   useEffect(() => {
     if (prompt) {
-      setTitle(prompt.title);
-      setDescription(prompt.description);
+      // Determine preferred language
+      const preferredLang =
+        exportLanguage === "original" ? locale : exportLanguage;
+      const isEsPreferred = preferredLang === "es";
+
+      // Load specific language versions if available
+      const esContent = prompt.contentEs || null;
+      const enContent = prompt.contentEn || null;
+      const esTitle = prompt.titleEs || null;
+      const enTitle = prompt.titleEn || null;
+      const esDesc = prompt.descriptionEs || null;
+      const enDesc = prompt.descriptionEn || null;
+
       const currentVersion = prompt.versions.find(
         (v) => v.id === prompt.currentVersionId,
       );
-      setContent(currentVersion?.content || "");
+
+      // Default to current version/main fields
+      let activeTitle = prompt.title;
+      let activeDesc = prompt.description;
+      let activeContent = currentVersion?.content || "";
+
+      // Override if preference exists in DB
+      if (isEsPreferred && esContent) {
+        activeContent = esContent;
+        if (esTitle) activeTitle = esTitle;
+        if (esDesc) activeDesc = esDesc;
+      } else if (!isEsPreferred && enContent) {
+        // Assuming 'en' or other non-es preference defaults to EN if available
+        activeContent = enContent;
+        if (enTitle) activeTitle = enTitle;
+        if (enDesc) activeDesc = enDesc;
+      }
+
+      setTitle(activeTitle);
+      setDescription(activeDesc);
+      setContent(activeContent);
       setSelectedVersion(currentVersion || null);
 
-      // Load existing bilingual content
-      setContentEs(prompt.contentEs || null);
-      setContentEn(prompt.contentEn || null);
+      // Store specific versions in state for toggling/saving
+      setContentEs(esContent);
+      setContentEn(enContent);
+      setTitleEs(esTitle);
+      setTitleEn(enTitle);
+      setDescriptionEs(esDesc);
+      setDescriptionEn(enDesc);
     } else {
       setTitle("");
       setDescription("");
@@ -84,8 +200,12 @@ export function PromptEditor({
       setSelectedVersion(null);
       setContentEs(null);
       setContentEn(null);
+      setTitleEs(null);
+      setTitleEn(null);
+      setDescriptionEs(null);
+      setDescriptionEn(null);
     }
-  }, [prompt, initialContent]);
+  }, [prompt, initialContent, exportLanguage, locale]);
 
   const handleSave = () => {
     if (!title.trim() || !content.trim()) return;
@@ -108,6 +228,10 @@ export function PromptEditor({
       description,
       contentEs,
       contentEn,
+      titleEs,
+      titleEn,
+      descriptionEs,
+      descriptionEn,
     );
     onClose();
   };
@@ -120,9 +244,6 @@ export function PromptEditor({
     }
     setShowVersions(false);
   };
-
-  // Get User Preference
-  const { exportLanguage } = useSettings();
 
   const handleTranslate = async () => {
     // 1. Identify Preferred Language (User's Context)
@@ -197,40 +318,83 @@ export function PromptEditor({
     if (!sourceContent.title && !sourceContent.content) return;
 
     setIsAnalyzing(true);
+    console.log("[PromptEditor] Starting translation...", {
+      sourceContent,
+      targetLang,
+    });
 
     try {
-      const result = await translatePromptFields(sourceContent, targetLang);
+      // Create a timeout promise that rejects after 60 seconds
+      const timeoutPromise = new Promise<{
+        success: boolean;
+        data?: any;
+        error?: string;
+      }>((_, reject) => {
+        setTimeout(
+          () => reject(new Error("Translation timed out after 120s")),
+          120000,
+        );
+      });
+
+      // Race the translation against the timeout
+      const result = await Promise.race([
+        translatePromptFields(sourceContent, targetLang),
+        timeoutPromise,
+      ]);
+
+      console.log("[PromptEditor] Translation result:", result);
 
       if (result.success && result.data) {
-        // Save result to the correct bucket
+        // Save result to the correct bucket AND update UI
         if (targetLang === "es") {
-          setContentEs(result.data.content);
-          // Updating UI: "Show according to selected language"
-          // If preferred is ES, and we just generated ES, show it!
-          if (isEsPreferred) {
-            if (result.data.title) setTitle(result.data.title);
-            if (result.data.description)
-              setDescription(result.data.description);
-            if (result.data.content) setContent(result.data.content);
-          }
-        } else {
-          setContentEn(result.data.content);
-          // If preferred is EN, and we generated EN, show it.
+          // We are switching to ES.
+          // Backup current content to EN bucket (assuming source was EN)
+          // Ideally we should trust `contentEn` if available, or current `content` if we were editing EN.
           if (!isEsPreferred) {
-            if (result.data.title) setTitle(result.data.title);
-            if (result.data.description)
-              setDescription(result.data.description);
-            if (result.data.content) setContent(result.data.content);
+            // User was likely editing EN. Backup to EN state.
+            setContentEn(content);
+            setTitleEn(title);
+            setDescriptionEn(description);
           }
+
+          // Set ES state
+          setContentEs(result.data.content);
+          if (result.data.title) setTitleEs(result.data.title);
+          if (result.data.description)
+            setDescriptionEs(result.data.description);
+
+          // ALWAYS update UI to show the result
+          if (result.data.title) setTitle(result.data.title);
+          if (result.data.description) setDescription(result.data.description);
+          if (result.data.content) setContent(result.data.content);
+        } else {
+          // targetLang === "en"
+          // We are switching to EN.
+          if (isEsPreferred) {
+            // User was likely editing ES
+            setContentEs(content);
+            setTitleEs(title);
+            setDescriptionEs(description);
+          }
+
+          // Set EN state
+          setContentEn(result.data.content);
+          if (result.data.title) setTitleEn(result.data.title);
+          if (result.data.description)
+            setDescriptionEn(result.data.description);
+
+          // ALWAYS update UI to show the result
+          if (result.data.title) setTitle(result.data.title);
+          if (result.data.description) setDescription(result.data.description);
+          if (result.data.content) setContent(result.data.content);
         }
-        console.log(
-          `Translated to ${targetLang}. Displaying: ${isEsPreferred ? "ES" : "Non-ES"}`,
-        );
+        console.log(`Translated to ${targetLang}. Updating UI to show result.`);
       }
     } catch (e) {
       console.error("Translation failed", e);
     } finally {
       setIsAnalyzing(false);
+      console.log("[PromptEditor] Translation finished, state reset.");
     }
   };
 
@@ -247,7 +411,14 @@ export function PromptEditor({
   };
 
   const toggleAutoSuggest = () => {
-    setIsAutoSuggestEnabled(!isAutoSuggestEnabled);
+    const newState = !isAutoSuggestEnabled;
+    setIsAutoSuggestEnabled(newState);
+
+    // If turning ON and we have content, trigger immediate generation
+    if (newState && content.trim()) {
+      // We set lastPasteTime to now to trigger the "immediate" path in useEffect
+      setLastPasteTime(Date.now());
+    }
   };
 
   const getScoreColor = (score: number) => {
@@ -337,13 +508,26 @@ export function PromptEditor({
             <label className="block text-xs text-(--text-muted) font-mono mb-1 uppercase tracking-tighter">
               {t("promptTitle")}
             </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="..."
-              className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--acc-primary) font-mono focus:outline-none focus:border-green-600 transition-colors"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  if (!isGeneratingMetadata) setIsAutoSuggestEnabled(false);
+                }}
+                placeholder="..."
+                className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--acc-primary) font-mono focus:outline-none focus:border-green-600 transition-colors pr-8"
+              />
+              {isGeneratingMetadata && !title.trim() && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Sparkles
+                    size={14}
+                    className="text-yellow-400 animate-pulse"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Description */}
@@ -351,13 +535,26 @@ export function PromptEditor({
             <label className="block text-xs text-(--text-muted) font-mono mb-1 uppercase tracking-tighter">
               {t("description")}
             </label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="..."
-              className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--text-primary) font-mono text-sm focus:outline-none focus:border-green-600 transition-colors"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  if (!isGeneratingMetadata) setIsAutoSuggestEnabled(false);
+                }}
+                placeholder="..."
+                className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--text-primary) font-mono text-sm focus:outline-none focus:border-green-600 transition-colors pr-8"
+              />
+              {isGeneratingMetadata && !description.trim() && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Sparkles
+                    size={14}
+                    className="text-yellow-400 animate-pulse"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Content */}
@@ -365,9 +562,11 @@ export function PromptEditor({
             <label className="block text-xs text-(--text-muted) font-mono mb-1 uppercase tracking-tighter">
               {t("content")}
             </label>
+
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
+              onPaste={() => setLastPasteTime(Date.now())}
               placeholder="..."
               rows={12}
               className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--text-primary) font-mono text-sm focus:outline-none focus:border-green-600 transition-colors resize-none"
