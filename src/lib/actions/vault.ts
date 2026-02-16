@@ -75,10 +75,10 @@ export async function searchPrompts(query: string, domain?: string) {
 
 export async function savePrompt(data: {
   id?: string;
-  titleEs: string;
-  titleEn: string;
-  descriptionEs: string;
-  descriptionEn: string;
+  titleEs?: string | null;
+  titleEn?: string | null;
+  descriptionEs?: string | null;
+  descriptionEn?: string | null;
   content: string;
   contentEs?: string | null;
   contentEn?: string | null;
@@ -87,63 +87,83 @@ export async function savePrompt(data: {
   metadata?: Record<string, any>;
 }) {
   try {
+    console.log("!!! SAVE_PROMPT START !!!");
+    console.log("OLLAMA_HOST:", process.env.OLLAMA_HOST);
+    console.log("Data Payload:", JSON.stringify(data, null, 2));
+    console.log("!!! SAVE PROMPT V4 - FORCE UPDATE !!!");
+
     // Generate embedding for the new/updated content
-    const vectorText = `${data.titleEn} ${data.descriptionEn} ${data.content} ${data.tags.join(" ")}`;
-    const embedding = await generateEmbedding(vectorText);
+    // Use available fields for vector text, defaulting to content if necessary
+    const vectorTitle = data.titleEn || data.titleEs || "Untitled";
+    const vectorDesc =
+      data.descriptionEn || data.descriptionEs || "No description";
+    const vectorText = `Title: ${vectorTitle}\nDescription: ${vectorDesc}\nContent: ${data.content}\nTags: ${data.tags.join(", ")}`;
+
+    let embedding: number[] | null = null;
+    try {
+      embedding = await generateEmbedding(vectorText);
+    } catch (e) {
+      console.warn(
+        "⚠️ Failed to generate embedding, saving without vector:",
+        e,
+      );
+      // Proceed without embedding
+    }
+
+    // Prepare values for insertion/update
+    const values = {
+      titleEs: data.titleEs || data.titleEn || "",
+      titleEn: data.titleEn || data.titleEs || "",
+      descriptionEs: data.descriptionEs || data.descriptionEn || "",
+      descriptionEn: data.descriptionEn || data.descriptionEs || "",
+      content: data.content,
+      contentEs: data.contentEs || null,
+      contentEn: data.contentEn || null,
+      tags: data.tags,
+      domain: data.domain || "general",
+      metadata: data.metadata || {},
+      updatedAt: new Date(),
+      ...(embedding ? { embedding } : {}), // Only include embedding if generated successfully
+    };
 
     if (data.id) {
-      // Update existing
+      // Update
       const existing = await db.query.prompts.findFirst({
         where: eq(prompts.id, data.id),
       });
 
       if (!existing) throw new Error("Prompt not found");
 
-      const newVersion = (existing.version || 0) + 1;
+      // Cast versions to a mutable array or default to empty
       const history = (existing.versions as any[]) || [];
+      const newVersion = (existing.version || 0) + 1;
 
       history.push({
-        id: crypto.randomUUID(),
+        version: existing.version || 1,
+        timestamp: new Date().toISOString(),
         content: existing.content,
-        // Optional: snapshot bilingual content too if needed in version history
-        version: existing.version,
-        createdAt: new Date().toISOString(),
+        titleEn: existing.titleEn,
+        titleEs: existing.titleEs,
+        descriptionEn: existing.descriptionEn,
+        descriptionEs: existing.descriptionEs,
+        tags: existing.tags,
+        domain: existing.domain,
+        metadata: existing.metadata,
       });
 
       await db
         .update(prompts)
         .set({
-          titleEs: data.titleEs,
-          titleEn: data.titleEn,
-          descriptionEs: data.descriptionEs,
-          descriptionEn: data.descriptionEn,
-          content: data.content,
-          contentEs: data.contentEs,
-          contentEn: data.contentEn,
-          tags: data.tags,
-          domain: data.domain,
-          metadata: data.metadata || existing.metadata,
-          embedding,
+          ...values,
           version: newVersion,
           versions: history,
-          updatedAt: new Date(),
         })
         .where(eq(prompts.id, data.id));
     } else {
-      // Create new
+      // Insert
       await db.insert(prompts).values({
-        type: data.domain?.startsWith("logic") ? "skill" : "standard", // Simple heuristic inference
-        titleEs: data.titleEs,
-        titleEn: data.titleEn,
-        descriptionEs: data.descriptionEs,
-        descriptionEn: data.descriptionEn,
-        content: data.content,
-        contentEs: data.contentEs,
-        contentEn: data.contentEn,
-        tags: data.tags,
-        domain: data.domain || "vault:standard",
-        metadata: data.metadata || {},
-        embedding,
+        ...values,
+        type: data.domain?.startsWith("logic") ? "skill" : "standard",
         version: 1,
         versions: [],
       });
@@ -152,8 +172,8 @@ export async function savePrompt(data: {
     revalidatePath("/[locale]/(sectors)/vault");
     return { success: true };
   } catch (error) {
-    console.error("❌ Save failed:", error);
-    return { success: false, error: String(error) };
+    console.error("Error saving prompt:", error); // Log the actual error
+    return { success: false, error: "Failed to save prompt" };
   }
 }
 

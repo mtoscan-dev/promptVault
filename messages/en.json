@@ -35,6 +35,16 @@
     "analyzing": "ANALYZING...",
     "score": "SCORE",
     "autoSuggest": "Auto-Suggest",
+    "autoFix": "Auto-Fix",
+    "fixing": "Fixing...",
+    "missingTranslation": "Missing translation",
+    "englishAvailable": "English content available",
+    "switchToEnglishMissing": "Switch to English (Missing)",
+    "spanishAvailable": "Spanish content available",
+    "switchToSpanishMissing": "Switch to Spanish (Missing)",
+    "aiAnalysis": "AI Analysis",
+    "clarity": "Clarity",
+    "suggestions": "Suggestions",
     "status": {
       "translate": {
         "detecting": "Detecting language...",
@@ -77,7 +87,8 @@
     "noPrompts": "No prompts found",
     "adjustSearch": "Try adjusting your search or filters",
     "createFirst": "Create your first prompt to get started",
-    "createFirstBtn": "Create First Prompt"
+    "createFirstBtn": "Create First Prompt",
+    "saveFailed": "Failed to save prompt"
   },
   "System": {
     "errorTitle": "SYSTEM ERROR",

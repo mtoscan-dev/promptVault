@@ -35,6 +35,16 @@
     "analyzing": "ANALIZANDO...",
     "score": "PUNTAJE",
     "autoSuggest": "Auto-Sugerir",
+    "autoFix": "Auto-Corregir",
+    "fixing": "Corrigiendo...",
+    "missingTranslation": "Falta traducción",
+    "englishAvailable": "Contenido en Inglés disponible",
+    "switchToEnglishMissing": "Cambiar a Inglés (Falta)",
+    "spanishAvailable": "Contenido en Español disponible",
+    "switchToSpanishMissing": "Cambiar a Español (Falta)",
+    "aiAnalysis": "Análisis IA",
+    "clarity": "Claridad",
+    "suggestions": "Sugerencias",
     "status": {
       "translate": {
         "detecting": "Detectando idioma...",
@@ -77,7 +87,8 @@
     "noPrompts": "No se encontraron prompts",
     "adjustSearch": "Intenta ajustar tu búsqueda o filtros",
     "createFirst": "Crea tu primer prompt para empezar",
-    "createFirstBtn": "Crear Primer Prompt"
+    "createFirstBtn": "Crear Primer Prompt",
+    "saveFailed": "Error al guardar el prompt"
   },
   "System": {
     "errorTitle": "ERROR_SISTEMA",

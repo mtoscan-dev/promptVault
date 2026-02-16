@@ -13,16 +13,20 @@ import {
   Copy,
   RefreshCw,
   Check,
+  Info,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { es, enUS } from "date-fns/locale";
 import { useSettings } from "@/contexts/SettingsContext";
-import { Prompt, PromptVersion } from "@/types";
+import { Prompt, PromptVersion, AnalysisResult } from "@/types";
 import { cn } from "@/utils/cn";
 import {
   translatePromptFields,
   generatePromptMetadata,
+  analyzePrompt,
+  optimizePrompt,
 } from "@/app/actions/forge-ai";
+import { detectLanguage } from "@/utils/languageDetection";
 import { useProcessSimulator } from "@/hooks/useProcessSimulator";
 import { PromptToolbar } from "./PromptToolbar";
 
@@ -65,15 +69,20 @@ export function PromptEditor({
     null,
   );
   // Analysis State
-  const [analysisResult, setAnalysisResult] = useState<number | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
+    null,
+  );
+  const [isOptimizing, setIsOptimizing] = useState(false);
 
   // Process Simulators
   const translateProcess = useProcessSimulator();
   const analyzeProcess = useProcessSimulator();
   const suggestProcess = useProcessSimulator();
 
-  // Bilingual Content State
-  // We keep track of the specific language versions if they exist
+  // Bilingual State
+  const [viewLanguage, setViewLanguage] = useState<"es" | "en">("en");
+
+  // Bilingual Content State (Buckets)
   const [contentEs, setContentEs] = useState<string | null>(null);
   const [contentEn, setContentEn] = useState<string | null>(null);
 
@@ -83,6 +92,36 @@ export function PromptEditor({
   const [descriptionEs, setDescriptionEs] = useState<string | null>(null);
   const [descriptionEn, setDescriptionEn] = useState<string | null>(null);
 
+  // Switch Language Logic
+  const handleLanguageSwitch = (lang: "es" | "en") => {
+    if (lang === viewLanguage) return;
+
+    // 1. Save current inputs to the OLD language bucket
+    if (viewLanguage === "es") {
+      setTitleEs(title);
+      setDescriptionEs(description);
+      setContentEs(content);
+    } else {
+      setTitleEn(title);
+      setDescriptionEn(description);
+      setContentEn(content);
+    }
+
+    // 2. Load NEW language bucket to inputs
+    if (lang === "es") {
+      setTitle(titleEs || "");
+      setDescription(descriptionEs || "");
+      setContent(contentEs || "");
+    } else {
+      setTitle(titleEn || "");
+      setDescription(descriptionEn || "");
+      setContent(contentEn || "");
+    }
+
+    // 3. Update View
+    setViewLanguage(lang);
+    setAnalysisResult(null); // Clear analysis on switch
+  };
   const handleAutoSuggest = async () => {
     if (!content.trim()) return;
 
@@ -102,8 +141,9 @@ export function PromptEditor({
           // Determine language for metadata
           // If preference is 'original', use the current UI locale as a strong hint
           // instead of 'auto', to prevent small models from defaulting to English.
-          const preferredLang =
-            exportLanguage === "original" ? locale : exportLanguage;
+          // BUT obey ViewLanguage if set?
+          // Actually, we should use viewLanguage as the preference now.
+          const preferredLang = viewLanguage;
 
           console.log(
             "[PromptEditor] Auto-Suggest Preferred Models Lang:",
@@ -174,31 +214,54 @@ export function PromptEditor({
       let activeDesc = prompt.description;
       let activeContent = currentVersion?.content || "";
 
-      // Override if preference exists in DB
-      if (isEsPreferred && esContent) {
-        activeContent = esContent;
-        if (esTitle) activeTitle = esTitle;
-        if (esDesc) activeDesc = esDesc;
-      } else if (!isEsPreferred && enContent) {
-        // Assuming 'en' or other non-es preference defaults to EN if available
-        activeContent = enContent;
-        if (enTitle) activeTitle = enTitle;
-        if (enDesc) activeDesc = enDesc;
-      }
-
-      setTitle(activeTitle);
-      setDescription(activeDesc);
-      setContent(activeContent);
-      setSelectedVersion(currentVersion || null);
-
-      // Store specific versions in state for toggling/saving
+      // Initialize bucket state
       setContentEs(esContent);
       setContentEn(enContent);
       setTitleEs(esTitle);
       setTitleEn(enTitle);
       setDescriptionEs(esDesc);
       setDescriptionEn(enDesc);
+
+      // Determine Initial View Language and Active Content
+      // Logic: If preference matches a populated bucket, show that.
+      // Else show what we have.
+      let initialView: "es" | "en" = "en";
+
+      if (isEsPreferred) {
+        if (esContent) {
+          initialView = "es";
+          activeContent = esContent;
+          if (esTitle) activeTitle = esTitle;
+          if (esDesc) activeDesc = esDesc;
+        } else if (enContent) {
+          // Fallback to EN if ES missing
+          initialView = "en";
+          activeContent = enContent;
+          if (enTitle) activeTitle = enTitle;
+          if (enDesc) activeDesc = enDesc;
+        }
+      } else {
+        // EN Preferred
+        if (enContent) {
+          initialView = "en";
+          activeContent = enContent;
+          if (enTitle) activeTitle = enTitle;
+          if (enDesc) activeDesc = enDesc;
+        } else if (esContent) {
+          initialView = "es";
+          activeContent = esContent;
+          if (esTitle) activeTitle = esTitle;
+          if (esDesc) activeDesc = esDesc;
+        }
+      }
+
+      setViewLanguage(initialView);
+      setTitle(activeTitle);
+      setDescription(activeDesc);
+      setContent(activeContent);
+      setSelectedVersion(currentVersion || null);
     } else {
+      // New Prompt
       setTitle("");
       setDescription("");
       setContent(initialContent || "");
@@ -209,34 +272,62 @@ export function PromptEditor({
       setTitleEn(null);
       setDescriptionEs(null);
       setDescriptionEn(null);
+      // Default view language to locale
+      setViewLanguage(locale === "es" ? "es" : "en");
     }
   }, [prompt, initialContent, exportLanguage, locale]);
+
+  // Auto-Detect Language on Content Change
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (!content.trim()) return;
+
+      const detected = detectLanguage(content);
+      if (detected && detected !== viewLanguage) {
+        // Only switch if we are strictly confident and it differs.
+        // We also need to decide if we "move" the content or just switch view.
+        // Requirement: "cambiar el toggle al idioma correspondiente".
+        // Use case: User types Spanish in Global mode (which might be EN view).
+        // Result: Switch to ES view. Keep content.
+        setViewLanguage(detected);
+      }
+    }, 1000); // 1s debounce
+
+    return () => clearTimeout(handler);
+  }, [content, viewLanguage]);
 
   const handleSave = () => {
     if (!title.trim() || !content.trim()) return;
 
-    // Final sync before save:
-    // If we are in "es" locale (or logic), we assume current UI is ES.
-    // If we are in "en", current UI is EN.
-    // However, the user might be editing EITHER.
-    // Lacking explicit language toggle in UI, we rely on the heuristic used in Translate.
-    // BUT, we should probably update the "current" one based on what we have.
-    // Actually, `content` is the MASTER. `contentEs/En` are valid translations.
-    // If I just translated to EN, `content` IS English. `contentEn` should be updated to `content`.
-    // We'll handle this sync inside handleTranslate mostly.
-    // Here we just pass what we have.
+    // Sync current inputs to their bucket before saving
+    let finalContentEs = contentEs;
+    let finalContentEn = contentEn;
+    let finalTitleEs = titleEs;
+    let finalTitleEn = titleEn;
+    let finalDescEs = descriptionEs;
+    let finalDescEn = descriptionEn;
+
+    if (viewLanguage === "es") {
+      finalContentEs = content;
+      finalTitleEs = title;
+      finalDescEs = description;
+    } else {
+      finalContentEn = content;
+      finalTitleEn = title;
+      finalDescEn = description;
+    }
 
     onSave(
       prompt?.id || null,
       content,
       title,
       description,
-      contentEs,
-      contentEn,
-      titleEs,
-      titleEn,
-      descriptionEs,
-      descriptionEn,
+      finalContentEs,
+      finalContentEn,
+      finalTitleEs,
+      finalTitleEn,
+      finalDescEs,
+      finalDescEn,
     );
     onClose();
   };
@@ -251,74 +342,11 @@ export function PromptEditor({
   };
 
   const handleTranslate = async () => {
-    // 1. Identify Preferred Language (User's Context)
-    // If exportLanguage is 'original', fall back to locale.
-    const preferredLang =
-      exportLanguage === "original" ? locale : exportLanguage;
-    const isEsPreferred = preferredLang === "es";
+    const isEsView = viewLanguage === "es";
+    let targetLang: "es" | "en" = isEsView ? "en" : "es";
 
-    // 2. Identify Source and Target
-    // We assume the User is looking at/editing the "Source".
-    // Or, we check which buckets are available.
-
-    // Heuristic:
-    // If we have content in Preferred bucket, we treat that as source (User might have edited it).
-    // If Preferred bucket is empty, but we have the Other bucket, that Other is source.
-
-    let sourceContent = { title, description, content };
-    let targetLang: "es" | "en" = isEsPreferred ? "en" : "es"; // Default target is opposite of preferred
-
-    // Current State Check
-    const hasEs = !!(contentEs || (isEsPreferred && content)); // Simplified check
-    const hasEn = !!(contentEn || (!isEsPreferred && content));
-
-    // Gap Filling Logic
-    if (isEsPreferred) {
-      // Prefer Spanish.
-      if (hasEs && !hasEn) {
-        // Have ES, Missing EN -> Translate to EN
-        targetLang = "en";
-      } else if (!hasEs && hasEn) {
-        // Missing ES, Have EN -> Translate to ES
-        targetLang = "es";
-      } else if (hasEs && hasEn) {
-        // Have Both -> Assume we want to update the Translation form the Preferred (ES -> EN)
-        targetLang = "en";
-      }
-    } else {
-      // Prefer English/Other
-      if (hasEn && !hasEs) {
-        // Have EN, Missing ES -> Translate to ES
-        targetLang = "es";
-      } else if (!hasEn && hasEs) {
-        // Missing EN, Have ES -> Translate to EN
-        targetLang = "en";
-      } else if (hasEn && hasEs) {
-        // Have Both -> Update ES from EN
-        targetLang = "es";
-      }
-    }
-
-    // Determine Source Data based on Target
-    // If Target is ES, Source is EN.
-    if (targetLang === "es") {
-      // If we are currently viewing EN, take current state.
-      // If we are viewing ES (but generating ES?), that implies we are fixing ES.
-      // Let's assume current editor state IS the source content if it matches the source lang.
-      // BUT, checking "isEsPreferred" helps.
-      if (!isEsPreferred) {
-        // We are EN user, so current state is EN.
-        sourceContent = { title, description, content };
-      } else {
-        // We are ES user. If we are translating TO ES, it means we didn't have it.
-        // So current state MUST be EN (loaded fallback) or we look at contentEn var.
-        // Ideally use current state as it handles unsaved edits.
-        sourceContent = { title, description, content };
-      }
-    } else {
-      // Target is EN. Source is ES.
-      sourceContent = { title, description, content };
-    }
+    // Prepare Source Content from current view
+    const sourceContent = { title, description, content };
 
     if (!sourceContent.title && !sourceContent.content) return;
 
@@ -359,51 +387,46 @@ export function PromptEditor({
           console.log("[PromptEditor] Translation result:", result);
 
           if (result.success && result.data) {
-            // Save result to the correct bucket AND update UI
-            if (targetLang === "es") {
-              // We are switching to ES.
-              if (!isEsPreferred) {
-                // User was likely editing EN. Backup to EN state.
-                setContentEn(content);
-                setTitleEn(title);
-                setDescriptionEn(description);
-              }
+            // 1. Save Current (Source) to its bucket
+            if (isEsView) {
+              setContentEs(content);
+              setTitleEs(title);
+              setDescriptionEs(description);
+            } else {
+              setContentEn(content);
+              setTitleEn(title);
+              setDescriptionEn(description);
+            }
 
-              // Set ES state
+            // 2. Update Target Bucket
+            if (targetLang === "es") {
               setContentEs(result.data.content);
               if (result.data.title) setTitleEs(result.data.title);
               if (result.data.description)
                 setDescriptionEs(result.data.description);
-
-              // ALWAYS update UI to show the result
-              if (result.data.title) setTitle(result.data.title);
-              if (result.data.description)
-                setDescription(result.data.description);
-              if (result.data.content) setContent(result.data.content);
             } else {
-              // targetLang === "en"
-              if (isEsPreferred) {
-                // User was likely editing ES
-                setContentEs(content);
-                setTitleEs(title);
-                setDescriptionEs(description);
-              }
-
-              // Set EN state
               setContentEn(result.data.content);
               if (result.data.title) setTitleEn(result.data.title);
               if (result.data.description)
                 setDescriptionEn(result.data.description);
-
-              // ALWAYS update UI to show the result
-              if (result.data.title) setTitle(result.data.title);
-              if (result.data.description)
-                setDescription(result.data.description);
-              if (result.data.content) setContent(result.data.content);
             }
-            console.log(
-              `Translated to ${targetLang}. Updating UI to show result.`,
-            );
+
+            // 3. Switch View to Target
+            handleLanguageSwitch(targetLang);
+
+            // 4. Ideally, handleLanguageSwitch would pick up the new bucket values.
+            // But since state updates are async, we might need to force the UI update here
+            // or rely on the fact that handleLanguageSwitch sets viewLanguage, and we just updated the buckets?
+            // Actually, handleLanguageSwitch *reads* from buckets. If we just called setContentEs,
+            // the state variable 'contentEs' won't be updated in this render cycle.
+            // So handleLanguageSwitch will read the OLD value.
+            // We must manually update the UI to the translated result.
+
+            if (result.data.content) setContent(result.data.content);
+            if (result.data.title) setTitle(result.data.title);
+            if (result.data.description)
+              setDescription(result.data.description);
+            setViewLanguage(targetLang);
           }
           return result;
         },
@@ -424,22 +447,66 @@ export function PromptEditor({
       t("status.analyze.scoring"),
     ];
 
-    await analyzeProcess.startProcess(
-      analyzeMessages,
-      async () => {
-        // Mock analysis delay
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        const mockScore = Math.floor(Math.random() * 40) + 60; // Random score 60-100
-        setAnalysisResult(mockScore);
-      },
-      { minDuration: 2000 },
-    );
+    try {
+      await analyzeProcess.startProcess(
+        analyzeMessages,
+        async () => {
+          // 2 minute timeout for local LLM
+          const timeoutPromise = new Promise<{
+            success: boolean;
+            data?: any;
+            error?: string;
+          }>((_, reject) => {
+            setTimeout(
+              () => reject(new Error("Analysis timed out after 120s")),
+              120000,
+            );
+          });
+
+          // Pass the current viewLanguage to get analysis in the correct language
+          const result = await Promise.race([
+            analyzePrompt(content, viewLanguage),
+            timeoutPromise,
+          ]);
+
+          if (result.success && result.data) {
+            setAnalysisResult(result.data);
+          }
+          return result;
+        },
+        { minDuration: 2000 },
+      );
+    } catch (error) {
+      console.error("Analysis Failed", error);
+    }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return "text-green-400 border-green-400";
-    if (score >= 70) return "text-yellow-400 border-yellow-400";
-    return "text-red-400 border-red-400";
+  const handleOptimize = async () => {
+    if (
+      !analysisResult ||
+      typeof analysisResult === "number" ||
+      !analysisResult?.suggestions.length
+    )
+      return;
+
+    setIsOptimizing(true);
+    try {
+      const result = await optimizePrompt(
+        content,
+        analysisResult.suggestions,
+        viewLanguage,
+      );
+
+      if (result.success && result.data?.optimizedContent) {
+        setContent(result.data.optimizedContent);
+        // Re-analyze automatically to show improvement
+        await handleAnalyze();
+      }
+    } catch (error) {
+      console.error("Optimization failed", error);
+    } finally {
+      setIsOptimizing(false);
+    }
   };
 
   const isNewPrompt = !prompt;
@@ -460,8 +527,69 @@ export function PromptEditor({
             <span className="text-green-400 font-mono">
               {isNewPrompt ? "$ new_prompt" : "$ edit_prompt"}
             </span>
+
+            {/* Language Toggle */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center bg-black/20 border border-white/10 rounded overflow-hidden ml-2">
+                <button
+                  onClick={() => handleLanguageSwitch("en")}
+                  disabled={!contentEn && viewLanguage !== "en"}
+                  className={cn(
+                    "px-3 py-1 text-xs font-mono transition-all",
+                    viewLanguage === "en"
+                      ? "bg-green-500/20 text-green-400 font-bold"
+                      : !contentEn
+                        ? "text-gray-600 cursor-not-allowed opacity-50"
+                        : "text-(--text-muted) hover:text-(--text-primary) hover:bg-white/5",
+                  )}
+                  title={
+                    contentEn
+                      ? t("englishAvailable")
+                      : t("switchToEnglishMissing")
+                  }
+                >
+                  EN
+                  {contentEn && (
+                    <span className="inline-block w-1 h-1 rounded-full bg-green-500 ml-1 mb-0.5"></span>
+                  )}
+                </button>
+                <div className="w-px h-full bg-white/10"></div>
+                <button
+                  onClick={() => handleLanguageSwitch("es")}
+                  disabled={!contentEs && viewLanguage !== "es"}
+                  className={cn(
+                    "px-3 py-1 text-xs font-mono transition-all",
+                    viewLanguage === "es"
+                      ? "bg-green-500/20 text-green-400 font-bold"
+                      : !contentEs
+                        ? "text-gray-600 cursor-not-allowed opacity-50"
+                        : "text-(--text-muted) hover:text-(--text-primary) hover:bg-white/5",
+                  )}
+                  title={
+                    contentEs
+                      ? t("spanishAvailable")
+                      : t("switchToSpanishMissing")
+                  }
+                >
+                  ES
+                  {contentEs && (
+                    <span className="inline-block w-1 h-1 rounded-full bg-green-500 ml-1 mb-0.5"></span>
+                  )}
+                </button>
+              </div>
+
+              {/* Warning Legend */}
+              {((!contentEn && viewLanguage === "es") ||
+                (!contentEs && viewLanguage === "en")) && (
+                <span className="text-[10px] text-orange-400/80 font-mono animate-pulse flex items-center gap-1">
+                  <span className="text-orange-500">⚠</span>{" "}
+                  {t("missingTranslation")}
+                </span>
+              )}
+            </div>
+
             {prompt && (
-              <div className="relative">
+              <div className="relative ml-2">
                 <button
                   onClick={() => setShowVersions(!showVersions)}
                   className="flex items-center gap-2 px-3 py-1 bg-(--bg-surface-hover) rounded text-sm font-mono text-(--text-primary) hover:bg-(--bg-surface-active) transition-colors"
@@ -521,7 +649,7 @@ export function PromptEditor({
           {/* Title */}
           <div>
             <label className="block text-xs text-(--text-muted) font-mono mb-1 uppercase tracking-tighter">
-              {t("promptTitle")}
+              {t("promptTitle")} ({viewLanguage.toUpperCase()})
             </label>
             <div className="relative">
               <input
@@ -585,24 +713,94 @@ export function PromptEditor({
             />
           </div>
 
-          {/* Analysis Result (Inline now) */}
-          {analysisResult !== null && !analyzeProcess.isProcessing && (
-            <div className="bg-black/20 border border-white/5 rounded p-3 flex items-center justify-between">
-              <span className="text-xs text-purple-400 font-mono">
-                {t("score")}: {analysisResult}/100
-              </span>
-              <div className="w-32 h-1.5 bg-gray-700/50 rounded-full overflow-hidden">
+          {/* Analysis Result Display */}
+          {analysisResult && !analyzeProcess.isProcessing && (
+            <div className="bg-black/20 border border-white/10 rounded-lg p-4 animate-in fade-in duration-300 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BarChart2 size={16} className="text-purple-400" />
+                  <span className="text-sm font-mono text-(--text-primary)">
+                    {t("aiAnalysis")} ({viewLanguage.toUpperCase()})
+                  </span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-(--text-muted) font-mono">
+                      {t("score")}:
+                    </span>
+                    <span
+                      className={cn(
+                        "text-lg font-bold font-mono",
+                        analysisResult.score >= 90
+                          ? "text-green-400"
+                          : analysisResult.score >= 70
+                            ? "text-yellow-400"
+                            : "text-red-400",
+                      )}
+                    >
+                      {analysisResult.score}/100
+                    </span>
+                  </div>
+
+                  {analysisResult.score < 100 && (
+                    <button
+                      onClick={handleOptimize}
+                      disabled={isOptimizing}
+                      className="flex items-center gap-1.5 px-3 py-1 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 hover:border-purple-500/50 rounded text-xs text-purple-300 font-mono transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isOptimizing ? (
+                        <RefreshCw size={12} className="animate-spin" />
+                      ) : (
+                        <Zap size={12} />
+                      )}
+                      {isOptimizing ? t("fixing") : t("autoFix")}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full h-1.5 bg-gray-700/50 rounded-full overflow-hidden">
                 <div
                   className={cn(
-                    "h-full transition-all duration-300",
-                    analysisResult >= 90
+                    "h-full transition-all duration-500",
+                    analysisResult.score >= 90
                       ? "bg-green-500"
-                      : analysisResult >= 70
+                      : analysisResult.score >= 70
                         ? "bg-yellow-500"
                         : "bg-red-500",
                   )}
-                  style={{ width: `${analysisResult}%` }}
+                  style={{ width: `${analysisResult.score}%` }}
                 />
+              </div>
+
+              {/* Clarity & Suggestions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                <div className="bg-black/20 p-3 rounded border border-white/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Info size={14} className="text-blue-400" />
+                    <span className="text-xs font-mono text-blue-400 uppercase">
+                      {t("clarity")}
+                    </span>
+                  </div>
+                  <p className="text-sm text-(--text-muted)">
+                    {analysisResult.clarity}
+                  </p>
+                </div>
+
+                <div className="bg-black/20 p-3 rounded border border-white/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles size={14} className="text-yellow-400" />
+                    <span className="text-xs font-mono text-yellow-400 uppercase">
+                      {t("suggestions")}
+                    </span>
+                  </div>
+                  <ul className="text-sm text-(--text-muted) space-y-1 list-disc list-inside">
+                    {analysisResult.suggestions.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
           )}

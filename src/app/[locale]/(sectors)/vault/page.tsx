@@ -1,16 +1,14 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { Plus, Terminal, Database, GitBranch } from "lucide-react";
+import { Plus, Terminal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
 import { TerminalSearch } from "@/components/TerminalSearch";
 import { TagCloud } from "@/components/TagCloud";
 import { PromptCard } from "@/components/PromptCard";
 import { PromptEditor } from "@/components/PromptEditor";
 import { Prompt, PromptVersion, Tag } from "@/types";
-import { initialPrompts } from "@/data/mock";
 import { classifyPrompt } from "@/utils/classification";
 import { TAG_COLORS } from "@/utils/styling";
 import { SystemErrorModal } from "@/components/SystemErrorModal";
@@ -21,6 +19,7 @@ export default function VaultPage() {
   const tCommon = useTranslations("Common");
   const tErrors = useTranslations("Errors");
   const tSystem = useTranslations("System");
+  const tEditor = useTranslations("Editor");
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -241,18 +240,21 @@ export default function VaultPage() {
         setPrompts(updated);
         setIsEditorOpen(false);
       } else {
-        setSystemError({ message: "Failed to save prompt" });
+        setSystemError({ message: tErrors("saveFailed") });
       }
     },
-    [searchQuery],
+    [searchQuery, tErrors],
   );
 
-  const handleDelete = useCallback((id: string) => {
-    if (confirm("Are you sure you want to delete this prompt?")) {
-      setPrompts((prev) => prev.filter((p) => p.id !== id));
-      // TODO: Call delete action
-    }
-  }, []);
+  const handleDelete = useCallback(
+    (id: string) => {
+      if (confirm(tEditor("confirmDelete"))) {
+        setPrompts((prev) => prev.filter((p) => p.id !== id));
+        // TODO: Call delete action
+      }
+    },
+    [tEditor],
+  );
 
   const switchVersion = useCallback((promptId: string, versionId: string) => {
     setPrompts((prev) =>

@@ -27,3 +27,9 @@ export interface Tag {
   color: string;
   count: number;
 }
+
+export interface AnalysisResult {
+  score: number;
+  clarity: string;
+  suggestions: string[];
+}
