@@ -47,22 +47,19 @@ export async function translatePromptFields(
     ROLE: Professional Technical Translator.
     TARGET LANGUAGE: ${targetLanguageName} (${targetLang === "es" ? "Español" : "English"}).
 
-    INSTRUCTIONS:
-    1. Translate the input text accurately to ${targetLanguageName}.
-    2. CRITICAL: The output must be 100% ${targetLanguageName}.
-    3. EXCEPTION: Keep technical terms (e.g., "SaaS", "React", "Next.js", "middleware") in English/original.
-    4. Maintain the original structure and formatting.
-    5. If title or description are empty, return null.
+    INPUT: You will receive a JSON object with 'title', 'description', and 'content'.
+    TASK: Translate the values of ALL three fields ('title', 'description', 'content') into ${targetLanguageName}.
 
-    GLOSSARY (Use these translations for commands):
-    - "Research" -> "Investiga"
-    - "Analyze" -> "Analiza"
-    - "Create" -> "Crea"
-    - "Write" -> "Escribe"
+    RULES:
+    1. 'title': Translate to ${targetLanguageName}. NEVER return the original English title unless it is a product name (e.g., "iPhone").
+    2. 'description': Translate to ${targetLanguageName}. MUST be in ${targetLanguageName}.
+    3. 'content': Translate to ${targetLanguageName}. Preserve markdown.
+    4. CRITICAL: The output must be 100% ${targetLanguageName}.
+    5. Technical terms (e.g. "React", "SaaS") stay in English, but the sentence structure MUST be ${targetLanguageName}.
 
     FORBIDDEN:
-    - Do NOT use Spanglish.
-    - Do NOT use French, Italian, or Portuguese.
+    - Do NOT return the input text as the output.
+    - Do NOT omit any fields.
   `;
 
   try {
@@ -73,27 +70,21 @@ export async function translatePromptFields(
       schema: z.object({
         title: z
           .string()
-          .nullable()
-          .optional()
-          .describe(`The translated title (or null if input was empty)`),
+          .describe(`The TRANSLATED title in ${targetLanguageName}.`),
         description: z
           .string()
-          .nullable()
-          .optional()
-          .describe(`The translated description (or null if input was empty)`),
+          .describe(`The TRANSLATED description in ${targetLanguageName}.`),
         content: z
           .string()
-          .describe(
-            `The translated prompt content in ${targetLanguageName}, preserving structure and variables`,
-          ),
+          .describe(`The translated prompt content in ${targetLanguageName}.`),
       }),
       messages: [
         { role: "system", content: systemPrompt },
         {
           role: "user",
           content: JSON.stringify({
-            title: data.title,
-            description: data.description,
+            title: data.title || "",
+            description: data.description || "",
             content: data.content,
           }),
         },
@@ -127,17 +118,17 @@ export async function generatePromptMetadata(
     1. ${languageInstruction}
     2. CRITICAL: If the instruction says "DETECT", you MUST output in the SAME language as the content.
     3. CRITICAL: If the instruction says "Spanish", the output MUST be 100% Spanish.
-    4. Title: A short, punchy, CLI-style command or title (max 5 words). Use snake_case or kebab-case if appropriate for code, or Title Case for prose.
+    4. Title: A concise, descriptive title in natural language (max 6 words). Use Title Case (e.g., "Python Script Generator", NOT "python_script_generator").
     5. Description: A concise summary of what this prompt does (max 15 words). Focus on the capability or output.
     
     Example (Auto/English content):
     Content: "Write a python script to..."
-    Title: "python_script_generator"
+    Title: "Python Script Generator"
     Description: "Generates Python scripts for automation tasks"
 
     Example (Auto/Spanish content):
     Content: "Escribe un poema sobre..."
-    Title: "generador_poemas"
+    Title: "Generador de Poemas"
     Description: "Crea poemas sobre temas específicos"
   `;
 
@@ -149,8 +140,8 @@ export async function generatePromptMetadata(
       language === "es" || (isAuto && content.match(/[áéíóúñ¿¡]/i));
 
     const titleAudit = isSpanish
-      ? "Título corto y potente en ESPAÑOL (máx 5 palabras). Snake_case o kebab-case si es código."
-      : "Short, punchy title for the prompt (max 5 words).";
+      ? "Título descriptivo en lenguaje natural (Español). Usa Mayúsculas Iniciales (e.g. 'Mi Prompt'). NO uses guiones bajos."
+      : "Descriptive title in natural language (English). Use Title Case. Do NOT use underscores.";
 
     const descAudit = isSpanish
       ? "Descripción concisa en ESPAÑOL de la utilidad del prompt (máx 15 palabras)."
