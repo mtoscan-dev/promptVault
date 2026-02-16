@@ -7,7 +7,6 @@ import {
   Clock,
   ChevronDown,
   Plus,
-  Languages,
   Sparkles,
   Zap,
   BarChart2,
@@ -24,6 +23,8 @@ import {
   translatePromptFields,
   generatePromptMetadata,
 } from "@/app/actions/forge-ai";
+import { useProcessSimulator } from "@/hooks/useProcessSimulator";
+import { PromptToolbar } from "./PromptToolbar";
 
 interface PromptEditorProps {
   prompt: Prompt | null;
@@ -63,9 +64,13 @@ export function PromptEditor({
   const [selectedVersion, setSelectedVersion] = useState<PromptVersion | null>(
     null,
   );
-  const [isAutoSuggestEnabled, setIsAutoSuggestEnabled] = useState(false);
+  // Analysis State
   const [analysisResult, setAnalysisResult] = useState<number | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Process Simulators
+  const translateProcess = useProcessSimulator();
+  const analyzeProcess = useProcessSimulator();
+  const suggestProcess = useProcessSimulator();
 
   // Bilingual Content State
   // We keep track of the specific language versions if they exist
@@ -77,65 +82,65 @@ export function PromptEditor({
   const [titleEn, setTitleEn] = useState<string | null>(null);
   const [descriptionEs, setDescriptionEs] = useState<string | null>(null);
   const [descriptionEn, setDescriptionEn] = useState<string | null>(null);
-  // Auto-Suggest Logic
-  const [isGeneratingMetadata, setIsGeneratingMetadata] = useState(false);
-  const [lastPasteTime, setLastPasteTime] = useState(0);
 
-  useEffect(() => {
-    if (!isAutoSuggestEnabled || !content.trim()) return;
+  const handleAutoSuggest = async () => {
+    if (!content.trim()) return;
 
-    // If Auto-Suggest is ENABLED, we generate regardless of whether fields are empty.
-    // The user explicitly turned it on.
+    console.log("[PromptEditor] Manual Auto-Suggest triggered...");
 
-    const isPaste = Date.now() - lastPasteTime < 500; // 500ms window to catch the update after paste
-    const delay = isPaste ? 0 : 1500;
+    const suggestMessages = [
+      t("status.autoSuggest.reading"),
+      t("status.autoSuggest.extracting"),
+      t("status.autoSuggest.generating"),
+      t("status.autoSuggest.refining"),
+    ];
 
-    const timer = setTimeout(async () => {
-      setIsGeneratingMetadata(true);
-      console.log("[PromptEditor] Auto-Suggesting metadata...");
+    try {
+      await suggestProcess.startProcess(
+        suggestMessages,
+        async () => {
+          // Determine language for metadata
+          // If preference is 'original', use the current UI locale as a strong hint
+          // instead of 'auto', to prevent small models from defaulting to English.
+          const preferredLang =
+            exportLanguage === "original" ? locale : exportLanguage;
 
-      try {
-        // Determine language for metadata
-        const preferredLang =
-          exportLanguage === "original" ? locale : exportLanguage;
+          console.log(
+            "[PromptEditor] Auto-Suggest Preferred Models Lang:",
+            preferredLang,
+          );
 
-        // Timeout Promise (120s)
-        const timeoutPromise = new Promise<{
-          success: boolean;
-          data?: any;
-          error?: string;
-        }>((_, reject) => {
-          setTimeout(() => reject(new Error("Auto-Suggest timed out")), 120000);
-        });
+          // Timeout Promise (120s)
+          const timeoutPromise = new Promise<{
+            success: boolean;
+            data?: any;
+            error?: string;
+          }>((_, reject) => {
+            setTimeout(
+              () => reject(new Error("Auto-Suggest timed out")),
+              120000,
+            );
+          });
 
-        // Race
-        const result = await Promise.race([
-          generatePromptMetadata(content, preferredLang),
-          timeoutPromise,
-        ]);
+          // Race
+          const result = await Promise.race([
+            generatePromptMetadata(content, preferredLang),
+            timeoutPromise,
+          ]);
 
-        if (result.success && result.data) {
-          console.log("[PromptEditor] Auto-Suggest success:", result.data);
-          setTitle(result.data.title);
-          setDescription(result.data.description);
-        }
-      } catch (error) {
-        console.error("[PromptEditor] Auto-Suggest failed:", error);
-      } finally {
-        setIsGeneratingMetadata(false);
-      }
-    }, delay);
-
-    return () => clearTimeout(timer);
-  }, [
-    content,
-    isAutoSuggestEnabled,
-    title,
-    description,
-    lastPasteTime,
-    exportLanguage,
-    locale,
-  ]);
+          if (result.success && result.data) {
+            console.log("[PromptEditor] Auto-Suggest success:", result.data);
+            setTitle(result.data.title);
+            setDescription(result.data.description);
+          }
+          return result;
+        },
+        { minDuration: 2000 },
+      );
+    } catch (error) {
+      console.error("[PromptEditor] Auto-Suggest failed:", error);
+    }
+  };
 
   // Get User Preference
   console.log(
@@ -317,108 +322,118 @@ export function PromptEditor({
 
     if (!sourceContent.title && !sourceContent.content) return;
 
-    setIsAnalyzing(true);
     console.log("[PromptEditor] Starting translation...", {
       sourceContent,
       targetLang,
     });
 
+    const translateMessages = [
+      t("status.translate.detecting"),
+      t("status.translate.translating"),
+      t("status.translate.adapting"),
+      t("status.translate.finalizing"),
+    ];
+
     try {
-      // Create a timeout promise that rejects after 60 seconds
-      const timeoutPromise = new Promise<{
-        success: boolean;
-        data?: any;
-        error?: string;
-      }>((_, reject) => {
-        setTimeout(
-          () => reject(new Error("Translation timed out after 120s")),
-          120000,
-        );
-      });
+      await translateProcess.startProcess(
+        translateMessages,
+        async () => {
+          // Create a timeout promise that rejects after 60 seconds
+          const timeoutPromise = new Promise<{
+            success: boolean;
+            data?: any;
+            error?: string;
+          }>((_, reject) => {
+            setTimeout(
+              () => reject(new Error("Translation timed out after 120s")),
+              120000,
+            );
+          });
 
-      // Race the translation against the timeout
-      const result = await Promise.race([
-        translatePromptFields(sourceContent, targetLang),
-        timeoutPromise,
-      ]);
+          // Race the translation against the timeout
+          const result = await Promise.race([
+            translatePromptFields(sourceContent, targetLang),
+            timeoutPromise,
+          ]);
 
-      console.log("[PromptEditor] Translation result:", result);
+          console.log("[PromptEditor] Translation result:", result);
 
-      if (result.success && result.data) {
-        // Save result to the correct bucket AND update UI
-        if (targetLang === "es") {
-          // We are switching to ES.
-          // Backup current content to EN bucket (assuming source was EN)
-          // Ideally we should trust `contentEn` if available, or current `content` if we were editing EN.
-          if (!isEsPreferred) {
-            // User was likely editing EN. Backup to EN state.
-            setContentEn(content);
-            setTitleEn(title);
-            setDescriptionEn(description);
+          if (result.success && result.data) {
+            // Save result to the correct bucket AND update UI
+            if (targetLang === "es") {
+              // We are switching to ES.
+              if (!isEsPreferred) {
+                // User was likely editing EN. Backup to EN state.
+                setContentEn(content);
+                setTitleEn(title);
+                setDescriptionEn(description);
+              }
+
+              // Set ES state
+              setContentEs(result.data.content);
+              if (result.data.title) setTitleEs(result.data.title);
+              if (result.data.description)
+                setDescriptionEs(result.data.description);
+
+              // ALWAYS update UI to show the result
+              if (result.data.title) setTitle(result.data.title);
+              if (result.data.description)
+                setDescription(result.data.description);
+              if (result.data.content) setContent(result.data.content);
+            } else {
+              // targetLang === "en"
+              if (isEsPreferred) {
+                // User was likely editing ES
+                setContentEs(content);
+                setTitleEs(title);
+                setDescriptionEs(description);
+              }
+
+              // Set EN state
+              setContentEn(result.data.content);
+              if (result.data.title) setTitleEn(result.data.title);
+              if (result.data.description)
+                setDescriptionEn(result.data.description);
+
+              // ALWAYS update UI to show the result
+              if (result.data.title) setTitle(result.data.title);
+              if (result.data.description)
+                setDescription(result.data.description);
+              if (result.data.content) setContent(result.data.content);
+            }
+            console.log(
+              `Translated to ${targetLang}. Updating UI to show result.`,
+            );
           }
-
-          // Set ES state
-          setContentEs(result.data.content);
-          if (result.data.title) setTitleEs(result.data.title);
-          if (result.data.description)
-            setDescriptionEs(result.data.description);
-
-          // ALWAYS update UI to show the result
-          if (result.data.title) setTitle(result.data.title);
-          if (result.data.description) setDescription(result.data.description);
-          if (result.data.content) setContent(result.data.content);
-        } else {
-          // targetLang === "en"
-          // We are switching to EN.
-          if (isEsPreferred) {
-            // User was likely editing ES
-            setContentEs(content);
-            setTitleEs(title);
-            setDescriptionEs(description);
-          }
-
-          // Set EN state
-          setContentEn(result.data.content);
-          if (result.data.title) setTitleEn(result.data.title);
-          if (result.data.description)
-            setDescriptionEn(result.data.description);
-
-          // ALWAYS update UI to show the result
-          if (result.data.title) setTitle(result.data.title);
-          if (result.data.description) setDescription(result.data.description);
-          if (result.data.content) setContent(result.data.content);
-        }
-        console.log(`Translated to ${targetLang}. Updating UI to show result.`);
-      }
+          return result;
+        },
+        { minDuration: 2500 },
+      );
     } catch (e) {
       console.error("Translation failed", e);
-    } finally {
-      setIsAnalyzing(false);
-      console.log("[PromptEditor] Translation finished, state reset.");
     }
   };
 
-  const handleAnalyze = () => {
-    setIsAnalyzing(true);
+  const handleAnalyze = async () => {
     setAnalysisResult(null);
 
-    // Mock analysis delay
-    setTimeout(() => {
-      const mockScore = Math.floor(Math.random() * 40) + 60; // Random score 60-100
-      setAnalysisResult(mockScore);
-      setIsAnalyzing(false);
-    }, 1500);
-  };
+    const analyzeMessages = [
+      t("status.analyze.tokenizing"),
+      t("status.analyze.checking"),
+      t("status.analyze.evaluating"),
+      t("status.analyze.scoring"),
+    ];
 
-  const toggleAutoSuggest = () => {
-    const newState = !isAutoSuggestEnabled;
-    setIsAutoSuggestEnabled(newState);
-
-    // If turning ON and we have content, trigger immediate generation
-    if (newState && content.trim()) {
-      // We set lastPasteTime to now to trigger the "immediate" path in useEffect
-      setLastPasteTime(Date.now());
-    }
+    await analyzeProcess.startProcess(
+      analyzeMessages,
+      async () => {
+        // Mock analysis delay
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const mockScore = Math.floor(Math.random() * 40) + 60; // Random score 60-100
+        setAnalysisResult(mockScore);
+      },
+      { minDuration: 2000 },
+    );
   };
 
   const getScoreColor = (score: number) => {
@@ -438,7 +453,7 @@ export function PromptEditor({
 
   return (
     <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-(--bg-surface) border border-(--border-primary) rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+      <div className="bg-(--bg-surface) border border-(--border-primary) rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl relative">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-(--border-primary)">
           <div className="flex items-center gap-3">
@@ -502,7 +517,7 @@ export function PromptEditor({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-4 space-y-4">
+        <div className="flex-1 overflow-auto p-4 space-y-4 pb-24">
           {/* Title */}
           <div>
             <label className="block text-xs text-(--text-muted) font-mono mb-1 uppercase tracking-tighter">
@@ -514,12 +529,11 @@ export function PromptEditor({
                 value={title}
                 onChange={(e) => {
                   setTitle(e.target.value);
-                  if (!isGeneratingMetadata) setIsAutoSuggestEnabled(false);
                 }}
                 placeholder="..."
                 className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--acc-primary) font-mono focus:outline-none focus:border-green-600 transition-colors pr-8"
               />
-              {isGeneratingMetadata && !title.trim() && (
+              {suggestProcess.isProcessing && !title.trim() && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
                   <Sparkles
                     size={14}
@@ -541,12 +555,11 @@ export function PromptEditor({
                 value={description}
                 onChange={(e) => {
                   setDescription(e.target.value);
-                  if (!isGeneratingMetadata) setIsAutoSuggestEnabled(false);
                 }}
                 placeholder="..."
                 className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--text-primary) font-mono text-sm focus:outline-none focus:border-green-600 transition-colors pr-8"
               />
-              {isGeneratingMetadata && !description.trim() && (
+              {suggestProcess.isProcessing && !description.trim() && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
                   <Sparkles
                     size={14}
@@ -566,12 +579,33 @@ export function PromptEditor({
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              onPaste={() => setLastPasteTime(Date.now())}
               placeholder="..."
               rows={12}
-              className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--text-primary) font-mono text-sm focus:outline-none focus:border-green-600 transition-colors resize-none"
+              className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--text-primary) font-mono text-sm focus:outline-none focus:border-green-600 transition-colors resize-none mb-12"
             />
           </div>
+
+          {/* Analysis Result (Inline now) */}
+          {analysisResult !== null && !analyzeProcess.isProcessing && (
+            <div className="bg-black/20 border border-white/5 rounded p-3 flex items-center justify-between">
+              <span className="text-xs text-purple-400 font-mono">
+                {t("score")}: {analysisResult}/100
+              </span>
+              <div className="w-32 h-1.5 bg-gray-700/50 rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full transition-all duration-300",
+                    analysisResult >= 90
+                      ? "bg-green-500"
+                      : analysisResult >= 70
+                        ? "bg-yellow-500"
+                        : "bg-red-500",
+                  )}
+                  style={{ width: `${analysisResult}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Info about auto-tagging */}
           <div className="bg-(--bg-surface-hover) rounded p-3 text-xs text-(--text-muted) font-mono">
@@ -579,104 +613,30 @@ export function PromptEditor({
           </div>
         </div>
 
+        {/* Holographic Toolbar (Floating) */}
+        <PromptToolbar
+          onTranslate={handleTranslate}
+          onAnalyze={handleAnalyze}
+          onAutoSuggest={handleAutoSuggest}
+          translateProcess={translateProcess}
+          analyzeProcess={analyzeProcess}
+          suggestProcess={suggestProcess}
+          hasContent={!!content.trim()}
+        />
+
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-(--border-primary)">
-          <div className="flex items-center gap-2 py-1 px-1 bg-black/20 rounded border border-white/5 overflow-x-auto">
-            <button
-              onClick={handleTranslate}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors whitespace-nowrap"
-              title={t("translate")}
-            >
-              <Languages size={14} className="text-blue-400" />
-              <span>{t("translate")}</span>
-            </button>
-
-            <div className="w-px h-4 bg-white/10" />
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleAnalyze}
-                disabled={isAnalyzing}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors whitespace-nowrap disabled:opacity-50"
-                title={t("analyze")}
-              >
-                <BarChart2 size={14} className="text-purple-400" />
-                <span>{t("analyze")}</span>
-              </button>
-
-              {/* Analysis Result */}
-              {(analysisResult !== null || isAnalyzing) && (
-                <div className="flex items-center gap-2 px-2 py-1 bg-black/40 rounded border border-white/10">
-                  {isAnalyzing ? (
-                    <span className="text-[10px] text-purple-400 animate-pulse font-mono">
-                      {t("analyzing")}
-                    </span>
-                  ) : (
-                    <>
-                      <span className="text-[10px] text-gray-500 font-mono">
-                        {t("score")}:
-                      </span>
-                      <span
-                        className={cn(
-                          "text-xs font-bold font-mono",
-                          analysisResult &&
-                            (analysisResult >= 90
-                              ? "text-green-400"
-                              : analysisResult >= 70
-                                ? "text-yellow-400"
-                                : "text-red-400"),
-                        )}
-                      >
-                        {analysisResult}/100
-                      </span>
-                      {/* Simple progress bar */}
-                      <div className="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden ml-1">
-                        <div
-                          className={cn(
-                            "h-full transition-all duration-500",
-                            analysisResult &&
-                              (analysisResult >= 90
-                                ? "bg-green-500"
-                                : analysisResult >= 70
-                                  ? "bg-yellow-500"
-                                  : "bg-red-500"),
-                          )}
-                          style={{ width: `${analysisResult}%` }}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="w-px h-4 bg-white/10" />
-
-            <button
-              onClick={toggleAutoSuggest}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono rounded transition-colors whitespace-nowrap",
-                isAutoSuggestEnabled
-                  ? "text-yellow-400 bg-yellow-400/10 hover:bg-yellow-400/20"
-                  : "text-gray-400 hover:text-white hover:bg-white/5",
-              )}
-              title={t("autoSuggest")}
-            >
-              <Sparkles
-                size={14}
-                className={isAutoSuggestEnabled ? "fill-yellow-400" : ""}
-              />
-              <span>{t("autoSuggest")}</span>
-            </button>
-          </div>
+        <div className="flex items-center justify-between p-4 border-t border-(--border-primary) bg-(--bg-surface)">
           <div className="flex items-center gap-2">
-            <div className="text-xs text-(--text-muted) font-mono lowercase opacity-60 mr-2">
+            <div className="text-xs text-(--text-muted) font-mono lowercase opacity-60">
               {hasChanges && (
-                <span className="text-yellow-600 dark:text-yellow-500">
-                  ● {t("save")}?
+                <span className="text-yellow-600 dark:text-yellow-500 animate-pulse">
+                  ● Unsaved Changes
                 </span>
               )}
             </div>
+          </div>
+
+          <div className="flex items-center gap-2">
             <button
               onClick={onClose}
               className="px-4 py-2 text-sm font-mono text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-surface-hover) rounded transition-colors"
@@ -689,7 +649,7 @@ export function PromptEditor({
               className={cn(
                 "px-4 py-2 text-sm font-mono rounded flex items-center gap-2 transition-colors",
                 title.trim() && content.trim()
-                  ? "bg-green-600 text-white hover:bg-green-500"
+                  ? "bg-green-600 text-white hover:bg-green-500 shadow-lg shadow-green-900/20"
                   : "bg-gray-700 text-gray-500 cursor-not-allowed",
               )}
             >

@@ -19,7 +19,7 @@
 - **Framework:** Next.js 14 (App Router) + React.
 - **Database:** PostgreSQL with `pgvector` extension for semantic search.
 - **ORM:** Drizzle ORM.
-- **AI Engine:** Ollama (Qwen 2.5 1.5B/7B) running in Docker containers.
+- **AI Engine:** Ollama (Host Mode) with Qwen 2.5 (1.5B/7B) for GPU acceleration.
 - **Styling:** Tailwind CSS with a Terminal/Neon aesthetic.
 - **Package Management:** pnpm (Optimized disk space and RAM usage).
 
@@ -65,6 +65,27 @@ $$\text{Performance} = \frac{\text{Generated Tokens}}{\text{Response Time (s)}}$
 
 ## 🚀 Installation & Deployment
 
+### Prerequisites
+
+- **Docker Desktop** installed and running.
+- **Ollama** installed on your host machine (Mac/Windows/Linux).
+- **Node.js 20+** and **pnpm** (if running locally without Docker).
+
+### AI Setup (Host Mode)
+
+To enable GPU acceleration (Metal), this project uses your host's Ollama instance.
+
+1.  **Install Ollama:** [Download here](https://ollama.com).
+2.  **Pull the Model:**
+    ```bash
+    ollama pull qwen2.5:1.5b
+    # Or for more power (if you have >16GB RAM):
+    ollama pull qwen2.5:7b
+    ```
+3.  **Ensure Ollama is running:** It should be accessible at `http://localhost:11434`.
+
+### Project Setup
+
 1.  **Clone & Configure:**
 
     ```bash
@@ -83,8 +104,10 @@ $$\text{Performance} = \frac{\text{Generated Tokens}}{\text{Response Time (s)}}$
 3.  **Spin up Infrastructure (Docker):**
 
     ```bash
-    docker-compose up -d
+    ./scripts/docker-start.sh
     ```
+
+    _Note: This starts the App and Database. The internal AI container is disabled in favor of the Host AI._
 
 4.  **Sync Database:**
 

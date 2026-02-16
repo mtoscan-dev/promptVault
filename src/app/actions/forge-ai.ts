@@ -13,7 +13,7 @@ const ollama = createOpenAI({
 
 export async function streamForgeResponse(
   messages: any[],
-  model: string = "qwen2.5:1.5b",
+  model: string = process.env.DEFAULT_MODEL || "qwen2.5:14b",
 ) {
   try {
     // Basic validation
@@ -22,6 +22,7 @@ export async function streamForgeResponse(
     }
 
     // Streaming response
+    console.log(`[ForgeAI] Streaming response using model: ${model}`);
     const result = await streamText({
       model: ollama(model),
       messages,
@@ -48,25 +49,27 @@ export async function translatePromptFields(
 
     INSTRUCTIONS:
     1. Translate the input text accurately to ${targetLanguageName}.
-    2. DO NOT MIX LANGUAGES. The output must be 100% ${targetLanguageName}, except for technical terms.
-    3. KEEP technical terms (e.g., "SaaS", "product-led growth", "React", "Next.js") in English/original.
+    2. CRITICAL: The output must be 100% ${targetLanguageName}.
+    3. EXCEPTION: Keep technical terms (e.g., "SaaS", "React", "Next.js", "middleware") in English/original.
     4. Maintain the original structure and formatting.
     5. If title or description are empty, return null.
 
     GLOSSARY (Use these translations for commands):
-    - "Research" -> "Investiga" (NOT "Recherche")
+    - "Research" -> "Investiga"
     - "Analyze" -> "Analiza"
     - "Create" -> "Crea"
     - "Write" -> "Escribe"
 
-    CRITICAL: 
-    - Do NOT use French ("Recherche"), Italian, or Portuguese words.
-    - Use standard, professional ${targetLanguageName}.
+    FORBIDDEN:
+    - Do NOT use Spanglish.
+    - Do NOT use French, Italian, or Portuguese.
   `;
 
   try {
+    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    console.log(`[ForgeAI] Generating object using model: ${modelToUse}`);
     const { object } = await generateObject({
-      model: ollama("qwen2.5:1.5b"),
+      model: ollama(modelToUse),
       schema: z.object({
         title: z
           .string()
@@ -110,7 +113,10 @@ export async function generatePromptMetadata(
   content: string,
   language: string = "es",
 ) {
-  const languageName = language === "en" ? "English" : "Spanish";
+  const isAuto = language === "auto";
+  const languageInstruction = isAuto
+    ? "DETECT the language of the prompt content. Generate the Title and Description IN THAT SAME LANGUAGE."
+    : `The output MUST be in ${language === "en" ? "English" : "Spanish"} (${language}).`;
 
   const systemPrompt = `
     You are an expert Prompt Librarian and Technical Writer.
@@ -118,26 +124,43 @@ export async function generatePromptMetadata(
     TASK: Analyze the provided prompt content and generate metadata.
     
     RULES:
-    1. The output MUST be in ${languageName} (${language}).
-    2. Generate the Title and Description IN ${languageName}.
-    3. Title: A short, punchy, CLI-style command or title (max 5 words). Use snake_case or kebab-case if appropriate for code, or Title Case for prose.
-    4. Description: A concise summary of what this prompt does (max 15 words). Focus on the capability or output.
+    1. ${languageInstruction}
+    2. CRITICAL: If the instruction says "DETECT", you MUST output in the SAME language as the content.
+    3. CRITICAL: If the instruction says "Spanish", the output MUST be 100% Spanish.
+    4. Title: A short, punchy, CLI-style command or title (max 5 words). Use snake_case or kebab-case if appropriate for code, or Title Case for prose.
+    5. Description: A concise summary of what this prompt does (max 15 words). Focus on the capability or output.
     
-    Example (${languageName}):
-    Content: "..."
-    Title: "..."
-    Description: "..."
+    Example (Auto/English content):
+    Content: "Write a python script to..."
+    Title: "python_script_generator"
+    Description: "Generates Python scripts for automation tasks"
+
+    Example (Auto/Spanish content):
+    Content: "Escribe un poema sobre..."
+    Title: "generador_poemas"
+    Description: "Crea poemas sobre temas específicos"
   `;
 
   try {
-    console.log(`[ForgeAI] Generating metadata in ${languageName}...`);
+    console.log(`[ForgeAI] Generating metadata (Target: ${language})...`);
+    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    console.log(`[ForgeAI] Metadata generation using model: ${modelToUse}`);
+    const isSpanish =
+      language === "es" || (isAuto && content.match(/[áéíóúñ¿¡]/i));
+
+    const titleAudit = isSpanish
+      ? "Título corto y potente en ESPAÑOL (máx 5 palabras). Snake_case o kebab-case si es código."
+      : "Short, punchy title for the prompt (max 5 words).";
+
+    const descAudit = isSpanish
+      ? "Descripción concisa en ESPAÑOL de la utilidad del prompt (máx 15 palabras)."
+      : "Concise description of the prompt's utility (max 15 words).";
+
     const { object } = await generateObject({
-      model: ollama("qwen2.5:1.5b"),
+      model: ollama(modelToUse),
       schema: z.object({
-        title: z.string().describe("Short, punchy title for the prompt"),
-        description: z
-          .string()
-          .describe("Concise description of the prompt's utility"),
+        title: z.string().describe(titleAudit),
+        description: z.string().describe(descAudit),
       }),
       messages: [
         { role: "system", content: systemPrompt },

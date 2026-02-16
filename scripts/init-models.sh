@@ -1,24 +1,24 @@
 #!/bin/bash
 
 # Configuration
-OLLAMA_CONTAINER="vault_ai"
+# Models required for Vault functionality
 REQUIRED_MODELS=("qwen2.5:1.5b" "nomic-embed-text")
 
-echo "🔍 Checking Ollama status in container: $OLLAMA_CONTAINER..."
+echo "🔍 Checking local Ollama installation..."
 
-# Check if container is running
-if ! docker ps | grep -q "$OLLAMA_CONTAINER"; then
-    echo "❌ Container $OLLAMA_CONTAINER is not running."
-    echo "   Please run './scripts/docker-start.sh' first."
+# Check if ollama is installed locally
+if ! command -v ollama &> /dev/null; then
+    echo "❌ 'ollama' command not found."
+    echo "   Please install Ollama from https://ollama.com"
     exit 1
 fi
 
-echo "✅ Ollama container is running."
+echo "✅ Ollama detected."
 
-# Pull models
+# Pull models locally
 for model in "${REQUIRED_MODELS[@]}"; do
-    echo "⬇️  Pulling model: $model..."
-    docker exec "$OLLAMA_CONTAINER" ollama pull "$model"
+    echo "⬇️  Pulling model (Host): $model..."
+    ollama pull "$model"
     if [ $? -eq 0 ]; then
         echo "✅ Model $model ready."
     else
@@ -27,4 +27,4 @@ for model in "${REQUIRED_MODELS[@]}"; do
     fi
 done
 
-echo "🎉 All AI models initialized successfully!"
+echo "🎉 All AI models initialized successfully on Host!"

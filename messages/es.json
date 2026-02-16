@@ -34,7 +34,35 @@
     "analyze": "Analizar",
     "analyzing": "ANALIZANDO...",
     "score": "PUNTAJE",
-    "autoSuggest": "Auto-Sugerir"
+    "autoSuggest": "Auto-Sugerir",
+    "status": {
+      "translate": {
+        "detecting": "Detectando idioma...",
+        "translating": "Traduciendo contenido...",
+        "adapting": "Adaptando matices...",
+        "finalizing": "Finalizando..."
+      },
+      "analyze": {
+        "tokenizing": "Tokenizando...",
+        "checking": "Revisando gramática...",
+        "evaluating": "Evaluando claridad...",
+        "scoring": "Calculando puntaje..."
+      },
+      "autoSuggest": {
+        "reading": "Leyendo contenido...",
+        "extracting": "Extrayendo intención...",
+        "generating": "Generando metadatos...",
+        "refining": "Refinando..."
+      },
+      "subroutine": "EJECUTANDO SUBRUTINA: {status}"
+    }
+  },
+  "SystemMonitor": {
+    "neuralLoad": "CARGA NEURONAL",
+    "memory": "MEM CTX",
+    "status": "ESTADO",
+    "idle": "EN ESPERA",
+    "processing": "PROCESANDO"
   },
   "PromptCard": {
     "copied": "Copiado",

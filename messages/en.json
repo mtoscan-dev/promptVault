@@ -34,7 +34,35 @@
     "analyze": "Analyze",
     "analyzing": "ANALYZING...",
     "score": "SCORE",
-    "autoSuggest": "Auto-Suggest"
+    "autoSuggest": "Auto-Suggest",
+    "status": {
+      "translate": {
+        "detecting": "Detecting language...",
+        "translating": "Translating content...",
+        "adapting": "Adapting nuances...",
+        "finalizing": "Finalizing..."
+      },
+      "analyze": {
+        "tokenizing": "Tokenizing...",
+        "checking": "Checking grammar...",
+        "evaluating": "Evaluating clarity...",
+        "scoring": "Scoring..."
+      },
+      "autoSuggest": {
+        "reading": "Reading content...",
+        "extracting": "Extracting intent...",
+        "generating": "Generating metadata...",
+        "refining": "Refining..."
+      },
+      "subroutine": "RUNNING SUBROUTINE: {status}"
+    }
+  },
+  "SystemMonitor": {
+    "neuralLoad": "NEURAL LOAD",
+    "memory": "CTX MEM",
+    "status": "STATUS",
+    "idle": "IDLE",
+    "processing": "PROCESSING"
   },
   "PromptCard": {
     "copied": "Copied",
