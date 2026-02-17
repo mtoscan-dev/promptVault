@@ -817,7 +817,7 @@ export function PromptEditor({
                 />
 
                 {/* Floating Toolbar within Editor */}
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 w-auto animate-in slide-in-from-bottom-4 duration-500">
+                <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-10 w-auto animate-in slide-in-from-bottom-4 duration-500">
                   <PromptToolbar
                     onTranslate={handleTranslate}
                     onAnalyze={handleAnalyze}
@@ -997,25 +997,11 @@ export function PromptEditor({
                     </span>
                   </div>
 
-                  <PromptEvaluationResults data={analysisResult} />
-
-                  {analysisResult.totalScore < 70 && (
-                    <button
-                      onClick={handleOptimize}
-                      disabled={isOptimizing}
-                      className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl text-indigo-300 transition-all border border-indigo-500/20 hover:border-indigo-500/40 font-mono text-xs group"
-                    >
-                      {isOptimizing ? (
-                        <RefreshCw size={14} className="animate-spin" />
-                      ) : (
-                        <Zap
-                          size={14}
-                          className="text-indigo-400 group-hover:animate-pulse"
-                        />
-                      )}
-                      {isEs ? "REFINAMIENTO IA" : "AI REFINEMENT"}
-                    </button>
-                  )}
+                  <PromptEvaluationResults
+                    data={analysisResult}
+                    onOptimize={handleOptimize}
+                    isOptimizing={isOptimizing}
+                  />
                 </div>
               )}
             </div>

@@ -32,11 +32,15 @@ interface EvaluationData {
 
 interface PromptEvaluationResultsProps {
   data: EvaluationData;
+  onOptimize?: () => void;
+  isOptimizing?: boolean;
   className?: string;
 }
 
 export function PromptEvaluationResults({
   data,
+  onOptimize,
+  isOptimizing,
   className,
 }: PromptEvaluationResultsProps) {
   const t = useTranslations("Editor.Evaluation");
@@ -80,6 +84,8 @@ export function PromptEvaluationResults({
     if (percentage >= 50) return "text-yellow-400";
     return "text-red-400";
   };
+
+  const isLowScore = data.totalScore < 60;
 
   return (
     <div
@@ -189,25 +195,54 @@ export function PromptEvaluationResults({
 
       {/* Actionable Suggestions */}
       {data.prioritySuggestions.length > 0 && (
-        <div className="space-y-3">
-          <h4 className="text-[10px] font-mono font-bold uppercase tracking-widest text-(--text-muted) flex items-center gap-2 px-1">
-            <AlertTriangle size={12} className="text-yellow-400" />
-            {t("refinementSuggestions")}
-          </h4>
-          <div className="space-y-2">
-            {data.prioritySuggestions.map((suggestion, i) => (
-              <div
-                key={i}
-                className="flex gap-2 p-3 bg-yellow-500/5 border border-yellow-500/10 rounded-lg text-[11px] text-yellow-100/80 leading-snug animate-in slide-in-from-left-2 duration-300"
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                <span className="text-yellow-500 shrink-0 select-none">
-                  {i + 1}.
-                </span>
-                <span>{suggestion}</span>
-              </div>
-            ))}
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <h4 className="text-[10px] font-mono font-bold uppercase tracking-widest text-(--text-muted) flex items-center gap-2 px-1">
+              <AlertTriangle size={12} className="text-yellow-400" />
+              {t("refinementSuggestions")}
+            </h4>
+            <div className="space-y-2">
+              {data.prioritySuggestions.map((suggestion, i) => (
+                <div
+                  key={i}
+                  className="flex gap-2 p-3 bg-yellow-500/5 border border-yellow-500/10 rounded-lg text-[11px] text-yellow-100/80 leading-snug animate-in slide-in-from-left-2 duration-300"
+                  style={{ animationDelay: `${i * 100}ms` }}
+                >
+                  <span className="text-yellow-500 shrink-0 select-none">
+                    {i + 1}.
+                  </span>
+                  <span>{suggestion}</span>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Refinement Button - Always Visible but stylized */}
+          {onOptimize && (
+            <button
+              onClick={onOptimize}
+              disabled={isOptimizing}
+              className={cn(
+                "w-full flex items-center justify-center gap-2 py-3 rounded-xl transition-all border font-mono text-[10px] uppercase tracking-widest group",
+                isLowScore
+                  ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/40"
+                  : "bg-green-500/5 border-green-500/10 text-green-400/70 hover:bg-green-500/10 hover:border-green-500/30",
+              )}
+            >
+              {isOptimizing ? (
+                <TrendingUp size={14} className="animate-pulse" />
+              ) : (
+                <CheckCircle2
+                  size={14}
+                  className={cn(
+                    "group-hover:scale-110 transition-transform",
+                    isLowScore ? "text-indigo-400" : "text-green-500",
+                  )}
+                />
+              )}
+              {isOptimizing ? "Processing..." : t("aiRefinement")}
+            </button>
+          )}
         </div>
       )}
     </div>
