@@ -29,6 +29,7 @@ import { detectLanguage } from "@/utils/languageDetection";
 import { useProcessSimulator } from "@/hooks/useProcessSimulator";
 import { PromptToolbar } from "./PromptToolbar";
 import { TagBadge } from "./TagBadge";
+import { TaxonomyPicker } from "./TaxonomyPicker";
 import { TAXONOMY } from "@/utils/taxonomy";
 
 interface PromptEditorProps {
@@ -79,6 +80,7 @@ export function PromptEditor({
   // Tagging State
   const [selectedTags, setSelectedTags] = useState<SmartTag[]>([]);
   const [suggestedTags, setSuggestedTags] = useState<SmartTag[]>([]);
+  const [showTaxonomyPicker, setShowTaxonomyPicker] = useState(false);
 
   // Process Simulators
   const translateProcess = useProcessSimulator();
@@ -764,9 +766,19 @@ export function PromptEditor({
               <label className="block text-xs text-(--text-muted) font-mono uppercase tracking-tighter">
                 {t("tags")}
               </label>
-              <span className="text-[10px] font-mono text-gray-500">
-                {selectedTags.length} {t("tagsActive")}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-gray-500">
+                  {selectedTags.length} {t("tagsActive")}
+                </span>
+                <button
+                  onClick={() => setShowTaxonomyPicker(!showTaxonomyPicker)}
+                  className="p-1 px-2 text-[10px] bg-(--bg-surface-active) hover:bg-(--bg-surface-hover) border border-(--border-primary) rounded flex items-center gap-1 transition-colors text-(--text-primary)"
+                  title="Browse Taxonomy"
+                >
+                  <Plus size={10} />
+                  {t("addTag")}
+                </button>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2 p-3 bg-black/10 dark:bg-black/30 border border-(--border-primary) rounded min-h-[50px] transition-all duration-300">
               {selectedTags.length > 0 ? (
@@ -788,6 +800,15 @@ export function PromptEditor({
                 </div>
               )}
             </div>
+
+            {/* Taxonomy Picker Side Panel */}
+            {showTaxonomyPicker && (
+              <TaxonomyPicker
+                selectedTags={selectedTags}
+                onToggleTag={toggleTag}
+                onClose={() => setShowTaxonomyPicker(false)}
+              />
+            )}
             {/* Suggested Tags Area */}
             {suggestedTags.length > 0 && !tagProcess.isProcessing && (
               <div className="animate-in slide-in-from-top-2 fade-in duration-500">
