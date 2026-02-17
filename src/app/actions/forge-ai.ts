@@ -423,3 +423,53 @@ export async function getTaxonomy() {
     return { success: false, error: "Failed to load taxonomy" };
   }
 }
+
+export async function predictDimension(
+  tagName: string,
+  dimensions: { id: string; nameEn: string; nameEs: string }[],
+): Promise<{ success: boolean; dimensionId?: string }> {
+  try {
+    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+
+    const context = dimensions
+      .map((d) => `- ID: ${d.id}, Name: ${d.nameEn} / ${d.nameEs}`)
+      .join("\n");
+
+    const systemPrompt = `
+      ROLE: Taxonomy Expert.
+      TASK: Predict the most appropriate Dimension ID for a new Tag.
+      
+      AVAILABLE DIMENSIONS:
+      ${context}
+      
+      INPUT: New Tag Name: "${tagName}"
+      
+      RULES:
+      1. Analyze the semantic meaning of the tag.
+      2. Match it to the best fitting Dimension from the list.
+      3. Return ONLY the Dimension ID.
+      4. If unsure, return "unknown".
+    `;
+
+    const { object } = await generateObject({
+      model: ollama(modelToUse),
+      schema: z.object({
+        dimensionId: z.string(),
+      }),
+      messages: [{ role: "system", content: systemPrompt }],
+      temperature: 0.1,
+    });
+
+    // Verify the predicted ID exists
+    const isValid = dimensions.some((d) => d.id === object.dimensionId);
+
+    return {
+      success: true,
+      dimensionId: isValid ? object.dimensionId : dimensions[0]?.id,
+    };
+  } catch (error) {
+    console.error("Dimension Prediction Error:", error);
+    // Fallback to first dimension if error
+    return { success: false, dimensionId: dimensions[0]?.id };
+  }
+}
