@@ -45,10 +45,28 @@ export function PromptToolbar({
   return (
     <div
       className={cn(
-        "absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-[60] pointer-events-none",
+        "flex flex-col items-center gap-2 z-60 pointer-events-none",
         className,
       )}
     >
+      {/* Floating Status Ticker - Now ABOVE the island */}
+      <div
+        className={cn(
+          "pointer-events-none transition-all duration-500 ease-out overflow-hidden flex items-center justify-center",
+          isAnyProcessing
+            ? "opacity-100 translate-y-0 h-6"
+            : "opacity-0 translate-y-2 h-0",
+        )}
+      >
+        <div className="px-3 py-0.5 rounded-full bg-black/80 border border-white/10 text-[10px] font-mono tracking-widest text-green-400 uppercase shadow-lg backdrop-blur-md">
+          {currentStatusMessage && (
+            <span className="animate-pulse">
+              {t("status.subroutine", { status: currentStatusMessage })}
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Holographic Island - Pointer events re-enabled for children */}
       <div className="pointer-events-auto flex items-center gap-1 p-1.5 bg-black/60 dark:bg-black/40 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl ring-1 ring-white/5 transition-all duration-300 hover:bg-black/70 hover:scale-[1.01] hover:ring-white/10">
         {/* Translate Button */}
@@ -90,24 +108,6 @@ export function PromptToolbar({
             isActive={isAnyProcessing}
             className="bg-transparent border-0 px-0 py-0"
           />
-        </div>
-      </div>
-
-      {/* Floating Status Ticker - Only visible when processing */}
-      <div
-        className={cn(
-          "pointer-events-none transition-all duration-500 ease-out overflow-hidden flex items-center justify-center",
-          isAnyProcessing
-            ? "opacity-100 translate-y-0 h-6"
-            : "opacity-0 translate-y-2 h-0",
-        )}
-      >
-        <div className="px-3 py-0.5 rounded-full bg-black/80 border border-white/10 text-[10px] font-mono tracking-widest text-green-400 uppercase shadow-lg backdrop-blur-md">
-          {currentStatusMessage && (
-            <span className="animate-pulse">
-              {t("status.subroutine", { status: currentStatusMessage })}
-            </span>
-          )}
         </div>
       </div>
     </div>

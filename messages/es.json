@@ -22,6 +22,7 @@
     "newTitle": "Nuevo Prompt",
     "save": "Guardar",
     "cancel": "Cancelar",
+    "close": "Cerrar",
     "delete": "Eliminar",
     "confirmDelete": "¿Estás seguro de que quieres eliminar este prompt?",
     "promptTitle": "Título",
@@ -54,6 +55,17 @@
     "aiSuggestions": "Sugerencias IA",
     "applyAll": "Aplicar Todo",
     "autoTagInfo": "Las etiquetas se sugieren automáticamente mientras escribes.",
+    "Evaluation": {
+      "totalScore": "Puntuación Total",
+      "refinementSuggestions": "Sugerencias de Refinamiento",
+      "aiRefinement": "Refinamiento IA",
+      "categories": {
+        "structure": "Estructura",
+        "context": "Contexto",
+        "quality": "Calidad",
+        "viability": "Viabilidad"
+      }
+    },
     "status": {
       "translate": {
         "detecting": "Detectando idioma...",

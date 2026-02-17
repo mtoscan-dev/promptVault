@@ -29,10 +29,21 @@ export interface Tag {
   count: number;
 }
 
-export interface AnalysisResult {
+export interface EvaluationCategory {
   score: number;
-  clarity: string;
-  suggestions: string[];
+  feedback: string;
+  strengths?: string[];
+}
+
+export interface AnalysisResult {
+  totalScore: number;
+  categories: {
+    structure: EvaluationCategory;
+    context: EvaluationCategory;
+    quality: EvaluationCategory;
+    viability: EvaluationCategory;
+  };
+  prioritySuggestions: string[];
 }
 
 export interface SmartTag {

@@ -165,109 +165,124 @@ export async function generatePromptMetadata(
   }
 }
 
-export async function analyzePrompt(content: string, language: string = "en") {
-  const isSpanish = language === "es";
-  const langName = isSpanish ? "Spanish" : "English";
-
-  const systemPrompt = `
-    ROLE: Expert Prompt Engineer and AI Logic Analyzer.
-    LANGUAGE: ${langName} (${language}).
-    
-    TASK: Analyze the provided prompt content for quality, clarity, and effectiveness.
-    
-    SCORING CRITERIA (0-100):
-    - Clarity: Is the intent unambiguous?
-    - Specificity: Are there clear constraints and context?
-    - Structure: Is the prompt well-organized?
-    - Safety: Does it avoid potential harmful outputs?
-
-    OUTPUT RULES:
-    1. Score: 0-100 integer.
-    2. Clarity: A 1-sentence assessment in ${langName}.
-    3. Suggestions: A list of 1-3 specific, actionable improvements in ${langName}.
-    
-    Be critical but constructive.
-  `;
-
-  try {
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
-    console.log(
-      `[ForgeAI] Analyzing prompt (${langName}) using model: ${modelToUse}`,
-    );
-
-    const clarityDesc = isSpanish
-      ? "Evaluación de una frase sobre la claridad del prompt (en Español)."
-      : "A one-sentence assessment of the prompt's clarity (in English).";
-
-    const suggestionsDesc = isSpanish
-      ? "Lista de 1-3 sugerencias accionables para mejorar el prompt (en Español)."
-      : "List of 1-3 specific, actionable suggestions for improvement (in English).";
-
-    const { object } = await generateObject({
-      model: ollama(modelToUse),
-      schema: z.object({
-        score: z
-          .number()
-          .int()
-          .min(0)
-          .max(100)
-          .describe("The quality score (0-100)."),
-        clarity: z.string().describe(clarityDesc),
-        suggestions: z.array(z.string()).describe(suggestionsDesc),
-      }),
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content },
-      ],
-      temperature: 0.2,
-    });
-
-    console.log("[ForgeAI] Analysis complete:", object);
-    return { success: true, data: object };
-  } catch (error) {
-    console.error("Analysis Error:", error);
-    return { success: false, error: "Failed to analyze prompt." };
-  }
-}
-
-export async function optimizePrompt(
+export async function analyzePromptEnhanced(
   content: string,
-  suggestions: string[],
   language: string = "en",
 ) {
   const isSpanish = language === "es";
   const langName = isSpanish ? "Spanish" : "English";
 
   const systemPrompt = `
-    ROLE: Expert Prompt Engineer.
+    ROLE: Expert Prompt Engineer and Quality Auditor.
+    TASK: Systematically analyze the provided prompt using the "Prompt Evaluation Chain".
     
-    TASK: Rewrite and optimize the user's prompt based on the provided suggestions.
-    
-    INPUT:
-    1. Original Prompt
-    2. Suggestions for improvement (Note: These might be in a different language than the prompt).
-    
-    RULES:
-    1. Apply the suggestions to improve Clarity, Specificity, and Structure.
-    2. Maintain the original intent and core capabilities.
-    3. Output ONLY the optimized prompt content. No explanations.
-    4. **CRITICAL: DETECT the language of the 'Original Prompt'. The 'Optimized Prompt' MUST be in that SAME language.**
-    5. **PROHIBITED:** Do NOT translate the prompt.
-       - If 'Original Prompt' is English -> Output English.
-       - If 'Original Prompt' is Spanish -> Output Spanish.
-       - Ignore the language of the 'Suggestions' and the 'User Locale' for the output language.
+    EVALUATION CRITERIA (Categorized):
+    A. Structure & Clarity: Clarity/Specificity, Instructions Structure, Formating, Brevity vs Detail.
+    B. Context & Purpose: Background Info, Task Definition, Persona/Role, Audience.
+    C. Instruction Quality: Output Style, Step-by-Step Reasoning, Consistency, Examples.
+    D. Viability: Iteration Potential, Model Adequacy, Constraints Feasibility.
+
+    SCORING:
+    - Each category (A, B, C) is out of 20 points.
+    - Category D is out of 15 points.
+    - Total Score: Max 75 points.
+
+    OUTPUT RULES:
+    1. Feedback must be in ${langName}.
+    2. Be critical and use professional engineering terminology.
   `;
 
   try {
     const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
-    console.log(`[ForgeAI] Optimizing prompt (${langName})...`);
+    console.log(`[ForgeAI] Enhanced Analysis using model: ${modelToUse}`);
 
     const { object } = await generateObject({
       model: ollama(modelToUse),
       schema: z.object({
-        optimizedContent: z
-          .string()
-          .describe("The rewritten, optimized prompt."),
+        totalScore: z.number().int().min(0).max(75),
+        categories: z.object({
+          structure: z.object({
+            score: z.number().min(0).max(20),
+            feedback: z
+              .string()
+              .describe(`Brief analysis of category A in ${langName}.`),
+            strengths: z
+              .array(z.string())
+              .describe("Specific strengths in category A."),
+          }),
+          context: z.object({
+            score: z.number().min(0).max(20),
+            feedback: z
+              .string()
+              .describe(`Brief analysis of category B in ${langName}.`),
+          }),
+          quality: z.object({
+            score: z.number().min(0).max(20),
+            feedback: z
+              .string()
+              .describe(`Brief analysis of category C in ${langName}.`),
+          }),
+          viability: z.object({
+            score: z.number().min(0).max(15),
+            feedback: z
+              .string()
+              .describe(`Brief analysis of category D in ${langName}.`),
+          }),
+        }),
+        prioritySuggestions: z
+          .array(z.string())
+          .max(3)
+          .describe(`Top 3 actionable improvements in ${langName}.`),
+      }),
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content },
+      ],
+      temperature: 0.1,
+    });
+
+    console.log("[ForgeAI] Enhanced Analysis complete:", object);
+    return { success: true, data: object };
+  } catch (error) {
+    console.error("Enhanced Analysis Error:", error);
+    return { success: false, error: "Failed to perform enhanced analysis." };
+  }
+}
+
+export async function optimizePromptEnhanced(
+  content: string,
+  analysisReport: any,
+  language: string = "en",
+) {
+  const isSpanish = language === "es";
+
+  const systemPrompt = `
+    ROLE: Expert Prompt Engineer.
+    TASK: Systematically refine the original prompt based on its Evaluation Report.
+    
+    INPUT:
+    1. Original Prompt
+    2. Evaluation Report (JSON with scores and specific feedback)
+    
+    STRATEGY:
+    - High Priority: Fix categories with low scores first.
+    - Preserve: Keep strengths mentioned in the report.
+    - Consistency: Ensure persona, context, and formatting are professional.
+    
+    RULES:
+    1. Output ONLY the optimized prompt content.
+    2. **CRITICAL: MAINTAIN THE ORIGINAL LANGUAGE of the prompt.**
+    3. Do NOT add conversational filler.
+  `;
+
+  try {
+    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    console.log(`[ForgeAI] Enhanced Optimization...`);
+
+    const { object } = await generateObject({
+      model: ollama(modelToUse),
+      schema: z.object({
+        optimizedContent: z.string().describe("The fully refined prompt."),
       }),
       messages: [
         { role: "system", content: systemPrompt },
@@ -275,7 +290,7 @@ export async function optimizePrompt(
           role: "user",
           content: JSON.stringify({
             originalPrompt: content,
-            suggestions: suggestions,
+            report: analysisReport,
           }),
         },
       ],
@@ -284,7 +299,7 @@ export async function optimizePrompt(
 
     return { success: true, data: object };
   } catch (error) {
-    console.error("Optimization Error:", error);
+    console.error("Enhanced Optimization Error:", error);
     return { success: false, error: "Failed to optimize prompt." };
   }
 }
@@ -421,5 +436,55 @@ export async function getTaxonomy() {
   } catch (error) {
     console.error("Failed to fetch taxonomy:", error);
     return { success: false, error: "Failed to load taxonomy" };
+  }
+}
+
+export async function predictDimension(
+  tagName: string,
+  dimensions: { id: string; nameEn: string; nameEs: string }[],
+): Promise<{ success: boolean; dimensionId?: string }> {
+  try {
+    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+
+    const context = dimensions
+      .map((d) => `- ID: ${d.id}, Name: ${d.nameEn} / ${d.nameEs}`)
+      .join("\n");
+
+    const systemPrompt = `
+      ROLE: Taxonomy Expert.
+      TASK: Predict the most appropriate Dimension ID for a new Tag.
+      
+      AVAILABLE DIMENSIONS:
+      ${context}
+      
+      INPUT: New Tag Name: "${tagName}"
+      
+      RULES:
+      1. Analyze the semantic meaning of the tag.
+      2. Match it to the best fitting Dimension from the list.
+      3. Return ONLY the Dimension ID.
+      4. If unsure, return "unknown".
+    `;
+
+    const { object } = await generateObject({
+      model: ollama(modelToUse),
+      schema: z.object({
+        dimensionId: z.string(),
+      }),
+      messages: [{ role: "system", content: systemPrompt }],
+      temperature: 0.1,
+    });
+
+    // Verify the predicted ID exists
+    const isValid = dimensions.some((d) => d.id === object.dimensionId);
+
+    return {
+      success: true,
+      dimensionId: isValid ? object.dimensionId : dimensions[0]?.id,
+    };
+  } catch (error) {
+    console.error("Dimension Prediction Error:", error);
+    // Fallback to first dimension if error
+    return { success: false, dimensionId: dimensions[0]?.id };
   }
 }

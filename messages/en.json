@@ -22,6 +22,7 @@
     "newTitle": "New Prompt",
     "save": "Save",
     "cancel": "Cancel",
+    "close": "Close",
     "delete": "Delete",
     "confirmDelete": "Are you sure you want to delete this prompt?",
     "promptTitle": "Title",
@@ -53,6 +54,17 @@
     "aiSuggestions": "AI Suggestions",
     "applyAll": "Apply All",
     "autoTagInfo": "Tags are auto-suggested as you type.",
+    "Evaluation": {
+      "totalScore": "Total Score",
+      "refinementSuggestions": "Refinement Suggestions",
+      "aiRefinement": "AI Refinement",
+      "categories": {
+        "structure": "Structure",
+        "context": "Context",
+        "quality": "Quality",
+        "viability": "Viability"
+      }
+    },
     "status": {
       "translate": {
         "detecting": "Detecting language...",
