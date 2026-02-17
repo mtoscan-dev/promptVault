@@ -34,3 +34,12 @@ export interface AnalysisResult {
   clarity: string;
   suggestions: string[];
 }
+
+export interface SmartTag {
+  id: string;
+  nameEn: string;
+  nameEs: string;
+  descriptionEn: string;
+  descriptionEs: string;
+  dimensionId: string;
+}

@@ -218,6 +218,7 @@ export default function VaultPage() {
       titleEn?: string | null,
       descriptionEs?: string | null,
       descriptionEn?: string | null,
+      tags?: string[], // New arg
     ) => {
       // Prepare data for server action
       const promptData = {
@@ -230,7 +231,10 @@ export default function VaultPage() {
         content: content,
         contentEs: contentEs,
         contentEn: contentEn,
-        tags: classifyPrompt(content + " " + title + " " + description),
+        tags:
+          tags && tags.length > 0
+            ? tags
+            : classifyPrompt(content + " " + title + " " + description),
       };
 
       const result = await savePrompt(promptData);

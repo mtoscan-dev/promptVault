@@ -285,3 +285,69 @@ export async function optimizePrompt(
     return { success: false, error: "Failed to optimize prompt." };
   }
 }
+
+import { TAXONOMY } from "@/utils/taxonomy";
+import { SmartTag } from "@/types";
+
+export async function suggestSmartTags(content: string, locale: string = "en") {
+  const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+  console.log(`[ForgeAI] Suggesting smart tags using model: ${modelToUse}...`);
+
+  try {
+    const isSpanish = locale === "es";
+
+    // Flatten tags for context
+    const tagsContext = TAXONOMY.tags
+      .map((t) => {
+        const desc = isSpanish ? t.descriptionEs : t.descriptionEn;
+        const name = isSpanish ? t.nameEs : t.nameEn;
+        return `- [${t.id}] ${name} (${t.dimensionId}): ${desc}`;
+      })
+      .join("\n");
+
+    const systemPrompt = `
+    ROLE: Expert Taxonomy Specialist and Content Classifier.
+    
+    TASK: Analyze the provided prompt content and extract relevant tags from the provided list.
+    
+    TAXONOMY LIST:
+    ${tagsContext}
+    
+    RULES:
+    1. Select ONLY tags that strictly apply to the content.
+    2. detailed analysis of the semantic intent.
+    3. Return a JSON array of tag IDs (e.g. ["seo", "dev"]).
+    4. Max 5 tags.
+    `;
+
+    const { object } = await generateObject({
+      model: ollama(modelToUse),
+      schema: z.object({
+        tagIds: z
+          .array(z.string())
+          .describe("List of relevant tag IDs from the taxonomy."),
+      }),
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content },
+      ],
+      temperature: 0.2, // Low temp for classification
+    });
+
+    console.log("[ForgeAI] Suggested Tag IDs:", object.tagIds);
+
+    // Hydrate tags
+    const hydratedTags = object.tagIds
+      .map((id) => TAXONOMY.tags.find((t) => t.id === id))
+      .filter((t): t is any => !!t) // Filter undefined
+      .map((t) => ({
+        ...t,
+        // Ensure type compatibility if needed, though structure matches SmartTag
+      })) as SmartTag[];
+
+    return { success: true, data: hydratedTags };
+  } catch (error) {
+    console.error("Tag Suggestion Error:", error);
+    return { success: false, error: "Failed to suggest tags." };
+  }
+}

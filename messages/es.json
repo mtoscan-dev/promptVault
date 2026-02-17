@@ -48,6 +48,11 @@
     "alreadyTranslated": "Ya Traducido",
     "unsyncedChanges": "Cambios sin traducir",
     "metadataComplete": "Metadatos Completos",
+    "tagsActive": "Activas",
+    "noTagsAssigned": "Sin etiquetas asignadas",
+    "aiSuggestions": "Sugerencias IA",
+    "applyAll": "Aplicar Todo",
+    "autoTagInfo": "Las etiquetas se sugieren automáticamente mientras escribes.",
     "status": {
       "translate": {
         "detecting": "Detectando idioma...",

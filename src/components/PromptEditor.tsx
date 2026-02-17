@@ -10,25 +10,26 @@ import {
   Sparkles,
   Zap,
   BarChart2,
-  Copy,
-  RefreshCw,
-  Check,
   Info,
+  RefreshCw,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { es, enUS } from "date-fns/locale";
 import { useSettings } from "@/contexts/SettingsContext";
-import { Prompt, PromptVersion, AnalysisResult } from "@/types";
+import { Prompt, PromptVersion, AnalysisResult, SmartTag } from "@/types";
 import { cn } from "@/utils/cn";
 import {
-  translatePromptFields,
   generatePromptMetadata,
   analyzePrompt,
   optimizePrompt,
+  suggestSmartTags,
+  translatePromptFields,
 } from "@/app/actions/forge-ai";
 import { detectLanguage } from "@/utils/languageDetection";
 import { useProcessSimulator } from "@/hooks/useProcessSimulator";
 import { PromptToolbar } from "./PromptToolbar";
+import { TagBadge } from "./TagBadge";
+import { TAXONOMY } from "@/utils/taxonomy";
 
 interface PromptEditorProps {
   prompt: Prompt | null;
@@ -45,6 +46,7 @@ interface PromptEditorProps {
     titleEn?: string | null,
     descriptionEs?: string | null,
     descriptionEn?: string | null,
+    tags?: string[],
   ) => void;
   onVersionSwitch: (promptId: string, versionId: string) => void;
 }
@@ -74,10 +76,15 @@ export function PromptEditor({
   );
   const [isOptimizing, setIsOptimizing] = useState(false);
 
+  // Tagging State
+  const [selectedTags, setSelectedTags] = useState<SmartTag[]>([]);
+  const [suggestedTags, setSuggestedTags] = useState<SmartTag[]>([]);
+
   // Process Simulators
   const translateProcess = useProcessSimulator();
   const analyzeProcess = useProcessSimulator();
   const suggestProcess = useProcessSimulator();
+  const tagProcess = useProcessSimulator();
 
   // Bilingual State
   const [viewLanguage, setViewLanguage] = useState<"es" | "en">("en");
@@ -122,6 +129,7 @@ export function PromptEditor({
     setViewLanguage(lang);
     setAnalysisResult(null); // Clear analysis on switch
   };
+
   const handleAutoSuggest = async () => {
     if (!content.trim()) return;
 
@@ -138,13 +146,7 @@ export function PromptEditor({
       await suggestProcess.startProcess(
         suggestMessages,
         async () => {
-          // Determine language for metadata
-          // If preference is 'original', use the current UI locale as a strong hint
-          // instead of 'auto', to prevent small models from defaulting to English.
-          // BUT obey ViewLanguage if set?
-          // Actually, we should use viewLanguage as the preference now.
           const preferredLang = viewLanguage;
-
           console.log(
             "[PromptEditor] Auto-Suggest Preferred Models Lang:",
             preferredLang,
@@ -183,19 +185,11 @@ export function PromptEditor({
   };
 
   // Get User Preference
-  console.log(
-    "[PromptEditor] Locale:",
-    locale,
-    "ExportLanguage:",
-    exportLanguage,
-  );
-
   useEffect(() => {
     if (prompt) {
       // Determine preferred language
       const preferredLang =
         exportLanguage === "original" ? locale : exportLanguage;
-      const isEsPreferred = preferredLang === "es";
 
       // Load specific language versions if available
       const esContent = prompt.contentEs || null;
@@ -223,9 +217,6 @@ export function PromptEditor({
       setDescriptionEn(enDesc);
 
       // Determine Initial View Language and Active Content
-      // Logic: Prioritize the site's current locale if it matches a populated bucket.
-      // Else fallback to the alternative language if populated.
-      // Else default to site locale (starting from scratch in that lang).
       let initialView: "es" | "en" = locale === "es" ? "es" : "en";
 
       if (locale === "es") {
@@ -260,6 +251,12 @@ export function PromptEditor({
       setDescription(activeDesc);
       setContent(activeContent);
       setSelectedVersion(currentVersion || null);
+
+      // Restore Tags
+      const hydratedTags = prompt.tags
+        .map((id) => TAXONOMY.tags.find((t) => t.id === id))
+        .filter((t): t is any => !!t) as SmartTag[];
+      setSelectedTags(hydratedTags);
     } else {
       // New Prompt
       setTitle("");
@@ -272,6 +269,7 @@ export function PromptEditor({
       setTitleEn(null);
       setDescriptionEs(null);
       setDescriptionEn(null);
+      setSelectedTags([]);
       // Default view language to locale
       setViewLanguage(locale === "es" ? "es" : "en");
     }
@@ -284,17 +282,63 @@ export function PromptEditor({
 
       const detected = detectLanguage(content);
       if (detected && detected !== viewLanguage) {
-        // Only switch if we are strictly confident and it differs.
-        // We also need to decide if we "move" the content or just switch view.
-        // Requirement: "cambiar el toggle al idioma correspondiente".
-        // Use case: User types Spanish in Global mode (which might be EN view).
-        // Result: Switch to ES view. Keep content.
         setViewLanguage(detected);
       }
     }, 1000); // 1s debounce
 
     return () => clearTimeout(handler);
   }, [content, viewLanguage]);
+
+  // Auto-Tag on Content Change
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (!content.trim() || content.length < 50) return;
+      handleAutoTag();
+    }, 2000); // 2s debounce
+
+    return () => clearTimeout(handler);
+  }, [content]);
+
+  const handleAutoTag = async () => {
+    if (!content.trim()) return;
+    setSuggestedTags([]);
+
+    const tagMessages = [
+      t("status.tagging.analyzing"),
+      t("status.tagging.referencing"),
+      t("status.tagging.categorizing"),
+      t("status.tagging.validating"),
+    ];
+
+    try {
+      await tagProcess.startProcess(
+        tagMessages,
+        async () => {
+          const result = await suggestSmartTags(content, viewLanguage);
+          if (result.success && Array.isArray(result.data)) {
+            const newSuggestions = result.data.filter(
+              (suggested: SmartTag) =>
+                !selectedTags.some((s) => s.id === suggested.id),
+            );
+            setSuggestedTags(newSuggestions);
+          }
+          return result;
+        },
+        { minDuration: 1500 },
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const toggleTag = (tag: SmartTag) => {
+    setSelectedTags((prev) =>
+      prev.some((t) => t.id === tag.id)
+        ? prev.filter((t) => t.id !== tag.id)
+        : [...prev, tag],
+    );
+    setSuggestedTags((prev) => prev.filter((t) => t.id !== tag.id));
+  };
 
   const handleSave = () => {
     if (!title.trim() || !content.trim()) return;
@@ -328,6 +372,7 @@ export function PromptEditor({
       finalTitleEn,
       finalDescEs,
       finalDescEn,
+      selectedTags.map((t) => t.id),
     );
     onClose();
   };
@@ -341,17 +386,8 @@ export function PromptEditor({
     setShowVersions(false);
   };
 
-  // Unsynced Detection Logic
-  // Check if current view differs from what would be in the "other" language's historical or current sync
   const isUnsynced = (() => {
     if (viewLanguage === "es") {
-      // If we are in ES, compare with EN bucket
-      // But we need to know what the EN version *should* be.
-      // Actually, if we just edited ES, it's unsynced with EN until we translate.
-      // So if (title !== titleEs || desc !== descEs || content !== contentEs) AND (title !== titleEn ... wait)
-      // Simpler: if hasChanges is true, then current view is unsynced with the OTHER bucket.
-
-      // Let's check if the current fields differ from the stored bucket for THIS language
       const modified =
         title !== titleEs ||
         description !== descriptionEs ||
@@ -370,12 +406,7 @@ export function PromptEditor({
     const isEsView = viewLanguage === "es";
     let targetLang: "es" | "en" = isEsView ? "en" : "es";
 
-    // Prepare Partial Content: Only translate fields that differ from their bucket
-    // or if the target bucket is empty.
     const fieldsToTranslate: any = {};
-    const sourceBucked = isEsView
-      ? { t: titleEs, d: descriptionEs, c: contentEs }
-      : { t: titleEn, d: descriptionEn, c: contentEn };
     const targetBucket = isEsView
       ? { t: titleEn, d: descriptionEn, c: contentEn }
       : { t: titleEs, d: descriptionEs, c: contentEs };
@@ -386,11 +417,6 @@ export function PromptEditor({
     if (content !== targetBucket.c) fieldsToTranslate.content = content;
 
     if (Object.keys(fieldsToTranslate).length === 0) return;
-
-    console.log("[PromptEditor] Starting partial translation...", {
-      fieldsToTranslate,
-      targetLang,
-    });
 
     const translateMessages = [
       t("status.translate.detecting"),
@@ -403,7 +429,6 @@ export function PromptEditor({
       await translateProcess.startProcess(
         translateMessages,
         async () => {
-          // Create a timeout promise that rejects after 60 seconds
           const timeoutPromise = new Promise<{
             success: boolean;
             data?: any;
@@ -415,13 +440,10 @@ export function PromptEditor({
             );
           });
 
-          // Race the translation against the timeout
           const result = await Promise.race([
             translatePromptFields(fieldsToTranslate, targetLang),
             timeoutPromise,
           ]);
-
-          console.log("[PromptEditor] Translation result:", result);
 
           if (result.success && result.data) {
             // 1. Save Current (Source) to its bucket
@@ -451,20 +473,12 @@ export function PromptEditor({
             // 3. Switch View to Target
             handleLanguageSwitch(targetLang);
 
-            // 4. Ideally, handleLanguageSwitch would pick up the new bucket values.
-            // But since state updates are async, we might need to force the UI update here
-            // or rely on the fact that handleLanguageSwitch sets viewLanguage, and we just updated the buckets?
-            // Actually, handleLanguageSwitch *reads* from buckets. If we just called setContentEs,
-            // the state variable 'contentEs' won't be updated in this render cycle.
-            // So handleLanguageSwitch will read the OLD value.
-            // We must manually update the UI to the translated result.
-
             if (result.data.content) setContent(result.data.content);
             if (result.data.title) setTitle(result.data.title);
             if (result.data.description)
               setDescription(result.data.description);
 
-            // Sync buckets so they are no longer unsynced
+            // Sync buckets
             if (targetLang === "es") {
               setContentEs(result.data.content || contentEs);
               setTitleEs(result.data.title || titleEs);
@@ -500,7 +514,6 @@ export function PromptEditor({
       await analyzeProcess.startProcess(
         analyzeMessages,
         async () => {
-          // 2 minute timeout for local LLM
           const timeoutPromise = new Promise<{
             success: boolean;
             data?: any;
@@ -512,7 +525,6 @@ export function PromptEditor({
             );
           });
 
-          // Pass the current viewLanguage to get analysis in the correct language
           const result = await Promise.race([
             analyzePrompt(content, viewLanguage),
             timeoutPromise,
@@ -548,7 +560,6 @@ export function PromptEditor({
 
       if (result.success && result.data?.optimizedContent) {
         setContent(result.data.optimizedContent);
-        // Re-analyze automatically to show improvement
         await handleAnalyze();
       }
     } catch (error) {
@@ -747,6 +758,79 @@ export function PromptEditor({
             </div>
           </div>
 
+          {/* Tagging UI */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs text-(--text-muted) font-mono uppercase tracking-tighter">
+                {t("tags")}
+              </label>
+              <span className="text-[10px] font-mono text-gray-500">
+                {selectedTags.length} {t("tagsActive")}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2 p-3 bg-black/10 dark:bg-black/30 border border-(--border-primary) rounded min-h-[50px] transition-all duration-300">
+              {selectedTags.length > 0 ? (
+                selectedTags.map((tag) => (
+                  <button
+                    key={tag.id}
+                    onClick={() => toggleTag(tag)}
+                    className="group"
+                  >
+                    <TagBadge
+                      name={locale === "es" ? tag.nameEs : tag.nameEn}
+                      className="cursor-pointer hover:bg-red-500/20 border-green-500/30 transition-colors"
+                    />
+                  </button>
+                ))
+              ) : (
+                <div className="text-xs text-gray-600 font-mono italic">
+                  {t("noTagsAssigned")}
+                </div>
+              )}
+            </div>
+            {/* Suggested Tags Area */}
+            {suggestedTags.length > 0 && !tagProcess.isProcessing && (
+              <div className="animate-in slide-in-from-top-2 fade-in duration-500">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles size={12} className="text-blue-400 animate-pulse" />
+                  <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest">
+                    {t("aiSuggestions")}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 p-2 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+                  {suggestedTags.map((tag) => (
+                    <button
+                      key={tag.id}
+                      onClick={() => toggleTag(tag)}
+                      className="animate-glow-blue"
+                    >
+                      <TagBadge
+                        name={locale === "es" ? tag.nameEs : tag.nameEn}
+                        className="cursor-pointer border-blue-500/30 bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.2)]"
+                      />
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => {
+                      suggestedTags.forEach((t) => toggleTag(t));
+                      setSuggestedTags([]);
+                    }}
+                    className="text-[10px] font-mono text-blue-300 hover:text-blue-200 px-2 py-1 rounded hover:bg-blue-500/10 transition-colors"
+                  >
+                    + {t("applyAll")}
+                  </button>
+                </div>
+              </div>
+            )}
+            {/* Tag Process Loader */}
+            {tagProcess.isProcessing && (
+              <div className="flex items-center gap-2 text-[10px] font-mono text-blue-400 animate-pulse">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                {tagProcess.currentMessage}
+              </div>
+            )}
+          </div>
+
           {/* Content */}
           <div className="flex-1">
             <label className="block text-xs text-(--text-muted) font-mono mb-1 uppercase tracking-tighter">
@@ -856,7 +940,8 @@ export function PromptEditor({
 
           {/* Info about auto-tagging */}
           <div className="bg-(--bg-surface-hover) rounded p-3 text-xs text-(--text-muted) font-mono">
-            <span className="text-purple-400">ℹ</span> {t("tags")}
+            <span className="text-purple-400">ℹ</span>{" "}
+            {t("autoTagInfo") || "Tags are auto-suggested as you type."}
           </div>
         </div>
 
