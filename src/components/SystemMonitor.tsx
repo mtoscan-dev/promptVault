@@ -1,54 +1,74 @@
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/utils/cn";
 import { useTranslations } from "next-intl";
-import { Activity, Cpu, Zap, Radio } from "lucide-react";
+import { Cpu, Zap, Radio, Wifi, WifiOff } from "lucide-react";
+import { getSystemStatus } from "@/app/actions/forge-ai";
 
 interface SystemMonitorProps {
   isActive: boolean;
   className?: string;
 }
 
+interface SystemStatus {
+  cpu: number;
+  ollama: {
+    online: boolean;
+    model: string | null;
+    memoryMB: number;
+  };
+}
+
+const POLL_INTERVAL_MS = 10_000; // 10 seconds
+
 export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
   const t = useTranslations("SystemMonitor");
-  const [cpuLoad, setCpuLoad] = useState(32);
-  const [memoryUsage, setMemoryUsage] = useState(412);
+  const [status, setStatus] = useState<SystemStatus | null>(null);
+  const [isChecking, setIsChecking] = useState(true);
   const [tokensPerSec, setTokensPerSec] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Fetch real system status on mount + every 10s
   useEffect(() => {
-    let animationFrameId: number;
-    let lastUpdate = 0;
-
-    const updateMetrics = (time: number) => {
-      if (time - lastUpdate > 100) {
-        // Update every 100ms
-        setCpuLoad((prev) => {
-          const target = isActive
-            ? 85 + (Math.random() * 10 - 5)
-            : 32 + (Math.random() * 4 - 2);
-          return prev + (target - prev) * 0.1;
-        });
-
-        setMemoryUsage((prev) => {
-          const target = isActive
-            ? 850 + (Math.random() * 50 - 25)
-            : 412 + (Math.random() * 10 - 5);
-          return Math.floor(prev + (target - prev) * 0.05);
-        });
-
-        if (isActive) {
-          setTokensPerSec(Math.floor(45 + Math.random() * 15));
-        } else {
-          setTokensPerSec(0);
-        }
-
-        lastUpdate = time;
+    const fetchStatus = async () => {
+      try {
+        const result = await getSystemStatus();
+        setStatus(result);
+        setIsChecking(false);
+      } catch {
+        setStatus(null);
+        setIsChecking(false);
       }
-      animationFrameId = requestAnimationFrame(updateMetrics);
     };
 
-    animationFrameId = requestAnimationFrame(updateMetrics);
-    return () => cancelAnimationFrame(animationFrameId);
+    fetchStatus();
+    intervalRef.current = setInterval(fetchStatus, POLL_INTERVAL_MS);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  // Animated tokens/s when processing (simulated — real t/s requires streaming hooks)
+  useEffect(() => {
+    if (!isActive) {
+      setTokensPerSec(0);
+      return;
+    }
+
+    const id = setInterval(() => {
+      setTokensPerSec(Math.floor(45 + Math.random() * 15));
+    }, 200);
+
+    return () => clearInterval(id);
   }, [isActive]);
+
+  const cpuLoad = status?.cpu ?? 0;
+  const memoryMB = status?.ollama.memoryMB ?? 0;
+  const ollamaOnline = status?.ollama.online ?? false;
+  const modelName = status?.ollama.model ?? null;
+
+  // Strip ":latest" suffix for cleaner display
+  const displayModel = modelName?.replace(/:latest$/, "") ?? null;
 
   return (
     <div
@@ -57,7 +77,7 @@ export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
         className,
       )}
     >
-      {/* Neural Load (CPU) */}
+      {/* Neural Load (CPU) — Real */}
       <div className="flex flex-col min-w-[100px]">
         <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono mb-0.5 tracking-tighter">
           <span className="flex items-center gap-1">
@@ -70,18 +90,18 @@ export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
               isActive ? "text-yellow-400" : "text-green-400",
             )}
           >
-            {Math.round(cpuLoad)}%
+            {cpuLoad}%
           </span>
         </div>
         <div className="h-1 bg-white/10 rounded-full overflow-hidden w-full relative">
           <div
             className={cn(
-              "absolute left-0 top-0 h-full transition-all duration-300 ease-out",
+              "absolute left-0 top-0 h-full transition-all duration-700 ease-out",
               isActive
                 ? "bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]"
                 : "bg-green-500/50",
             )}
-            style={{ width: `${cpuLoad}%` }}
+            style={{ width: `${Math.min(cpuLoad, 100)}%` }}
           />
         </div>
       </div>
@@ -89,7 +109,7 @@ export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
       {/* Vertical Separator */}
       <div className="w-px h-6 bg-white/10" />
 
-      {/* Context Memory */}
+      {/* Context Memory — Real Ollama Model Memory */}
       <div className="flex flex-col min-w-[100px]">
         <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono mb-0.5 tracking-tighter">
           <span className="flex items-center gap-1">
@@ -97,13 +117,13 @@ export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
             {t("memory")}
           </span>
           <span className="text-blue-400 transition-colors">
-            {memoryUsage}MB
+            {memoryMB > 0 ? `${memoryMB}MB` : "—"}
           </span>
         </div>
         <div className="flex gap-0.5 h-1 items-end w-full">
-          {/* Binary-like visualization bars */}
+          {/* Binary-like visualization bars — scaled relative to 4GB max */}
           {Array.from({ length: 16 }).map((_, i) => {
-            const active = i < (memoryUsage / 1000) * 16;
+            const active = memoryMB > 0 && i < (memoryMB / 4096) * 16;
             return (
               <div
                 key={i}
@@ -119,7 +139,39 @@ export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
         </div>
       </div>
 
-      {/* Optional: Active Processing Indicator */}
+      {/* Vertical Separator */}
+      <div className="w-px h-6 bg-white/10" />
+
+      {/* LLM Status — Real Ollama Connectivity */}
+      <div className="flex items-center gap-2">
+        {isChecking ? (
+          // Checking state
+          <div className="flex items-center gap-1.5 animate-pulse">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.5)]" />
+            <span className="text-[10px] font-mono text-amber-400 tracking-tighter whitespace-nowrap">
+              {t("checking")}
+            </span>
+          </div>
+        ) : ollamaOnline ? (
+          // Online — show model name
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)] animate-pulse" />
+            <span className="text-[10px] font-mono text-green-400 tracking-tighter whitespace-nowrap">
+              {displayModel || t("online")}
+            </span>
+          </div>
+        ) : (
+          // Offline — error state
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]" />
+            <span className="text-[10px] font-mono text-red-400 tracking-tighter whitespace-nowrap">
+              {t("offline")}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Active Processing Indicator (animated tokens/s) */}
       {isActive && (
         <div className="flex items-center gap-2 pl-2 border-l border-white/10 animate-pulse">
           <Radio size={12} className="text-red-400" />

@@ -411,6 +411,85 @@ export async function checkAIGateway() {
   }
 }
 
+/**
+ * Lightweight system status check for the SystemMonitor component.
+ * Fetches real CPU usage, Ollama connectivity, and model memory — no LLM inference.
+ */
+export async function getSystemStatus() {
+  const host = process.env.OLLAMA_HOST || "http://localhost:11434";
+  const defaultModel = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+
+  // --- CPU Usage (Node.js os module) ---
+  const os = await import("os");
+  const cpus = os.cpus();
+  let totalIdle = 0;
+  let totalTick = 0;
+  for (const cpu of cpus) {
+    for (const type in cpu.times) {
+      totalTick += cpu.times[type as keyof typeof cpu.times];
+    }
+    totalIdle += cpu.times.idle;
+  }
+  const cpuPercent = Math.round(((totalTick - totalIdle) / totalTick) * 100);
+
+  // --- Ollama Status ---
+  let ollamaOnline = false;
+  let activeModel: string | null = null;
+  let modelMemoryMB = 0;
+
+  try {
+    // Check connectivity + available models via /api/tags
+    const tagsRes = await fetch(`${host}/api/tags`, {
+      signal: AbortSignal.timeout(3000),
+    });
+
+    if (tagsRes.ok) {
+      ollamaOnline = true;
+      const tagsData = await tagsRes.json();
+      // Find the configured model in available models
+      const models = tagsData.models || [];
+      const configuredModel = models.find(
+        (m: any) =>
+          m.name === defaultModel || m.name === `${defaultModel}:latest`,
+      );
+      activeModel = configuredModel?.name || models[0]?.name || defaultModel;
+    }
+
+    // Get running model memory via /api/ps
+    if (ollamaOnline) {
+      try {
+        const psRes = await fetch(`${host}/api/ps`, {
+          signal: AbortSignal.timeout(3000),
+        });
+        if (psRes.ok) {
+          const psData = await psRes.json();
+          const runningModels = psData.models || [];
+          if (runningModels.length > 0) {
+            // Use the first running model's size (bytes -> MB)
+            const sizeBytes = runningModels[0].size || 0;
+            modelMemoryMB = Math.round(sizeBytes / (1024 * 1024));
+            // Override activeModel with what's actually running
+            activeModel = runningModels[0].name || activeModel;
+          }
+        }
+      } catch {
+        // /api/ps failed but Ollama is still online (no model loaded)
+      }
+    }
+  } catch {
+    ollamaOnline = false;
+  }
+
+  return {
+    cpu: cpuPercent,
+    ollama: {
+      online: ollamaOnline,
+      model: activeModel,
+      memoryMB: modelMemoryMB,
+    },
+  };
+}
+
 export async function getTaxonomy() {
   try {
     const dimensions = await db.select().from(tagDimensions);

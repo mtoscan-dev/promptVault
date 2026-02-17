@@ -99,7 +99,10 @@
     "memory": "MEM CTX",
     "status": "ESTADO",
     "idle": "EN ESPERA",
-    "processing": "PROCESANDO"
+    "processing": "PROCESANDO",
+    "online": "EN LÍNEA",
+    "offline": "LLM FUERA DE LÍNEA",
+    "checking": "VERIFICANDO..."
   },
   "PromptCard": {
     "copied": "Copiado",

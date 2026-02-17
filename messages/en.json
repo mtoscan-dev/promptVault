@@ -98,7 +98,10 @@
     "memory": "CTX MEM",
     "status": "STATUS",
     "idle": "IDLE",
-    "processing": "PROCESSING"
+    "processing": "PROCESSING",
+    "online": "ONLINE",
+    "offline": "LLM OFFLINE",
+    "checking": "CHECKING..."
   },
   "PromptCard": {
     "copied": "Copied",
