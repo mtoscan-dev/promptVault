@@ -1,24 +1,29 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { Plus, Terminal, Database, GitBranch } from "lucide-react";
+import { Plus, Terminal } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { v4 as uuidv4 } from "uuid";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { TerminalSearch } from "@/components/TerminalSearch";
 import { TagCloud } from "@/components/TagCloud";
 import { PromptCard } from "@/components/PromptCard";
 import { PromptEditor } from "@/components/PromptEditor";
 import { Prompt, PromptVersion, Tag } from "@/types";
-import { initialPrompts } from "@/data/mock";
 import { classifyPrompt } from "@/utils/classification";
 import { TAG_COLORS } from "@/utils/styling";
 import { SystemErrorModal } from "@/components/SystemErrorModal";
+import { VaultSkeleton } from "@/components/VaultSkeleton";
 import { searchPrompts, savePrompt } from "@/lib/actions/vault";
 
 export default function VaultPage() {
   const tCommon = useTranslations("Common");
   const tErrors = useTranslations("Errors");
   const tSystem = useTranslations("System");
+  const tEditor = useTranslations("Editor");
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -31,6 +36,7 @@ export default function VaultPage() {
   const [systemError, setSystemError] = useState<{ message: string } | null>(
     null,
   );
+  const [isLoading, setIsLoading] = useState(true);
 
   // Derive Tags
   useEffect(() => {
@@ -103,6 +109,8 @@ export default function VaultPage() {
         setPrompts(data);
       } catch (error) {
         console.error("Failed to load prompts:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchPrompts();
@@ -204,15 +212,24 @@ export default function VaultPage() {
       content: string,
       title: string,
       description: string,
+      contentEs?: string | null,
+      contentEn?: string | null,
+      titleEs?: string | null,
+      titleEn?: string | null,
+      descriptionEs?: string | null,
+      descriptionEn?: string | null,
     ) => {
       // Prepare data for server action
       const promptData = {
         id: id || undefined,
-        titleEs: title, // TODO: Add language selector in UI
-        titleEn: title,
-        descriptionEs: description,
-        descriptionEn: description,
+        // Use specific language version if available, otherwise fallback to current UI value
+        titleEs: titleEs || title,
+        titleEn: titleEn || title,
+        descriptionEs: descriptionEs || description,
+        descriptionEn: descriptionEn || description,
         content: content,
+        contentEs: contentEs,
+        contentEn: contentEn,
         tags: classifyPrompt(content + " " + title + " " + description),
       };
 
@@ -223,17 +240,15 @@ export default function VaultPage() {
         setPrompts(updated);
         setIsEditorOpen(false);
       } else {
-        setSystemError({ message: "Failed to save prompt" });
+        setSystemError({ message: tErrors("saveFailed") });
       }
     },
-    [searchQuery],
+    [searchQuery, tErrors],
   );
 
   const handleDelete = useCallback((id: string) => {
-    if (confirm("Are you sure you want to delete this prompt?")) {
-      setPrompts((prev) => prev.filter((p) => p.id !== id));
-      // TODO: Call delete action
-    }
+    setPrompts((prev) => prev.filter((p) => p.id !== id));
+    // TODO: Call delete action
   }, []);
 
   const switchVersion = useCallback((promptId: string, versionId: string) => {
@@ -248,13 +263,33 @@ export default function VaultPage() {
     );
   }, []);
 
+  const handleCommand = useCallback(
+    (command: string) => {
+      if (command === "new" || command === "add") {
+        handleNewPrompt();
+      }
+    },
+    [handleNewPrompt],
+  );
+
+  // URL Param Listener
+  useEffect(() => {
+    if (searchParams.get("new") === "true") {
+      handleNewPrompt();
+      // Clear param without reload
+      router.replace(pathname);
+    }
+  }, [searchParams, pathname, router, handleNewPrompt]);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Main content */}
       <main className="flex-1 overflow-auto">
         <div className="max-w-7xl mx-auto px-4 py-2">
           {/* Prompts grid */}
-          {filteredPrompts.length > 0 ? (
+          {isLoading ? (
+            <VaultSkeleton />
+          ) : filteredPrompts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredPrompts.map((prompt) => (
                 <PromptCard
@@ -307,16 +342,19 @@ export default function VaultPage() {
             />
           </div>
 
-          {/* Row 2: Terminal Search */}
-          <div className="bg-black/50 border border-gray-700 rounded px-3 py-1.5">
-            <TerminalSearch
-              tags={tags}
-              selectedTags={selectedTags}
-              placeholder={tCommon("searchPlaceholder")}
-              onSearch={handleSearch}
-              onTagSelect={handleTagSelect}
-              onTagRemove={handleTagRemove}
-            />
+          {/* Row 2: Terminal Search + Actions */}
+          <div className="flex gap-2 items-center">
+            <div className="bg-black/50 border border-gray-700 rounded px-3 py-1.5 flex-1">
+              <TerminalSearch
+                tags={tags}
+                selectedTags={selectedTags}
+                placeholder={tCommon("searchPlaceholder")}
+                onSearch={handleSearch}
+                onTagSelect={handleTagSelect}
+                onTagRemove={handleTagRemove}
+                onCommand={handleCommand}
+              />
+            </div>
           </div>
         </div>
       </footer>

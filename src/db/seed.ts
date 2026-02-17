@@ -26,9 +26,14 @@ async function main() {
       descriptionEs: "Genera consultas complejas optimizadas para Postgres.",
       descriptionEn: "Generates complex queries optimized for Postgres.",
       content:
-        "Actúa como un DBA experto en PostgreSQL. Tu objetivo es escribir consultas SQL eficientes, seguras y bien documentadas based on user requirements...",
+        "Actúa como un DBA Senior experto en PostgreSQL. Tu objetivo es escribir consultas SQL altamente optimizadas, seguras y escalables.\n\nReglas:\n1. Prioriza el rendimiento y la eficiencia.\n2. Sigue las mejores prácticas de seguridad.\n3. Documenta el código con comentarios claros.\n4. Si el usuario pregunta en inglés, responde en inglés. Si es español, en español.",
       tags: ["database", "sql", "backend"],
+      domain: "vault:standard",
       version: 1,
+      metadata: {
+        complexity: "advanced",
+        tool_compatibility: ["all"],
+      },
     },
     {
       type: "standard" as const,
@@ -37,9 +42,14 @@ async function main() {
       descriptionEs: "Ayuda a escribir narrativas envolventes.",
       descriptionEn: "Helps write immersive narratives.",
       content:
-        "You are a master storyteller. Create compelling narratives with deep character development and plot twists...",
+        "You are a master storyteller and creative writer. Your goal is to craft immersive narratives with deep character development and unexpected plot twists.\n\nGuidelines:\n1. Show, don't just tell.\n2. Focus on sensory details and emotional resonance.\n3. Develop complex characters with clear motivations.\n4. Adapt your tone to the requested genre.\n5. If the user prompts in Spanish, reply in Spanish. If English, reply in English.",
       tags: ["creative", "writing", "storytelling"],
+      domain: "vault:creative",
       version: 1,
+      metadata: {
+        complexity: "intermediate",
+        temperature_suggestion: 0.8,
+      },
     },
     // Skills (Functional Prompts for Forge)
     {
@@ -51,10 +61,12 @@ async function main() {
       content:
         "Analyze the provided React component for performance bottlenecks, re-renders, and memory leaks. Suggest optimizations using React.memo, useMemo, and useCallback...",
       tags: ["coding", "react", "optimization"],
+      domain: "logic:react",
       version: 1,
       metadata: {
         cli_prefix: "claude-opt",
-        engine: "claude-code-v1",
+        engine: "claude-code",
+        tool_compatibility: ["claude", "cursor"],
       },
     },
   ];
@@ -81,6 +93,7 @@ async function main() {
       descriptionEn: asset.descriptionEn,
       content: asset.content,
       tags: asset.tags,
+      domain: asset.domain, // New field
       version: asset.version,
       versions: [
         {

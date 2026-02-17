@@ -2,9 +2,10 @@ import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { es, enUS } from "date-fns/locale";
 import { useTranslations, useLocale } from "next-intl";
-import { GitBranch, Clock, Trash2, Edit3, Check } from "lucide-react";
+import { GitBranch, Clock, Trash2, Edit3, Check, Copy } from "lucide-react";
 import { Prompt } from "@/types";
 import { TagBadge } from "@/components/TagBadge";
+import { useSettings } from "@/contexts/SettingsContext";
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -36,6 +37,8 @@ export function PromptCard({
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
 
+  const { exportLanguage } = useSettings();
+
   const currentVersion = prompt.versions.find(
     (v) => v.id === prompt.currentVersionId,
   );
@@ -43,8 +46,39 @@ export function PromptCard({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(content);
+      let textToCopy = content;
+      let langTag = ""; // " [ES]", " [EN]"
+
+      // Logical Copy based on Export Preference
+      if (exportLanguage === "es") {
+        if (prompt.contentEs) {
+          textToCopy = prompt.contentEs;
+          langTag = " [ES]";
+        } else {
+          // User requested behavior: Copy original + Warning at the bottom
+          textToCopy = `${content}\n\n--------------------------------------------------\n[SYSTEM]: The prompt does not exist in the selected export language (${exportLanguage.toUpperCase()}).\n[SISTEMA]: El prompt no existe en el idioma de exportación seleccionado.`;
+          langTag = " [ORIGINAL]";
+        }
+      } else if (exportLanguage === "en") {
+        if (prompt.contentEn) {
+          textToCopy = prompt.contentEn;
+          langTag = " [EN]";
+        } else {
+          textToCopy = `${content}\n\n--------------------------------------------------\n[SYSTEM]: The prompt does not exist in the selected export language (EN).\n[SISTEMA]: El prompt no existe en el idioma de exportación seleccionado.`;
+          langTag = " [ORIGINAL]";
+        }
+      }
+      // Add other languages checks if we support storage for them later
+      // For now, if it's 'original' or unsupported storage lang, we default to content.
+
+      await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
+
+      // Update the toast message to reflect what happened
+      // We rely on the UI to show "Copied" but we can add the tag visually if we want
+      // For now the generic "Copied" is shown, but let's try to update the state to show language?
+      // The current UI just shows "Copied" icon or text.
+
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
@@ -78,13 +112,15 @@ export function PromptCard({
             <Check className="text-black" size={20} />
           </div>
           <span className="text-green-400 font-mono font-bold text-sm tracking-widest uppercase">
-            {t("copied")}
+            {t("copied")}{" "}
+            {exportLanguage !== "original" &&
+              `[${exportLanguage.toUpperCase()}]`}
           </span>
         </div>
       </div>
 
       <div
-        className={`absolute inset-0 z-30 flex items-center justify-center bg-gray-950/90 backdrop-blur-md transition-all duration-300 ${
+        className={`absolute inset-0 z-30 flex items-center justify-center bg-(--bg-surface)/95 backdrop-blur-md transition-all duration-300 ${
           showDeleteConfirm
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-4 pointer-events-none"
@@ -101,7 +137,7 @@ export function PromptCard({
                 e.stopPropagation();
                 setShowDeleteConfirm(false);
               }}
-              className="flex-1 py-1 px-2 border border-gray-700 hover:bg-gray-800 text-gray-400 text-[10px] font-mono uppercase tracking-wider transition-colors rounded"
+              className="flex-1 py-1 px-2 border border-(--border-primary) hover:bg-(--bg-surface-hover) text-(--text-secondary) hover:text-(--text-primary) text-[10px] font-mono uppercase tracking-wider transition-colors rounded"
             >
               {t("abort")}
             </button>
@@ -111,7 +147,7 @@ export function PromptCard({
                 onDelete(prompt.id);
                 setShowDeleteConfirm(false);
               }}
-              className="flex-1 py-1 px-2 bg-red-950/30 border border-red-900/50 hover:bg-red-900/50 text-red-500 text-[10px] font-mono uppercase tracking-wider transition-all rounded shadow-lg shadow-red-900/20"
+              className="flex-1 py-1 px-2 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-500 text-[10px] font-mono uppercase tracking-wider transition-all rounded shadow-lg shadow-red-500/10"
             >
               {t("exterminate")}
             </button>
@@ -147,6 +183,28 @@ export function PromptCard({
           </p>
         </div>
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
+          {/* New Copy Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCopy(); // Call handleCopy here
+            }}
+            className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors flex items-center" // Added flex items-center for text alignment
+            title={copied ? "Copied!" : "Copy to clipboard"}
+          >
+            {copied ? (
+              <Check size={14} className="text-green-400" />
+            ) : (
+              <Copy size={14} />
+            )}
+            {copied && (
+              <span className="ml-1 text-[10px] text-green-400 font-mono">
+                {exportLanguage !== "original"
+                  ? `[${exportLanguage.toUpperCase()}]`
+                  : ""}
+              </span>
+            )}
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -180,7 +238,10 @@ export function PromptCard({
       {/* Tags */}
       <div className="flex flex-wrap gap-1 mb-2">
         {prompt.tags.map((tag) => (
-          <div key={tag} className="relative z-50">
+          <div
+            key={tag}
+            className={`relative ${activeTagMenu === tag ? "z-50" : "z-10"}`}
+          >
             <TagBadge
               name={tag}
               onClick={() =>
@@ -220,7 +281,9 @@ export function PromptCard({
         ))}
 
         {/* Add Tag Button / Input */}
-        <div className="relative z-50 flex items-center">
+        <div
+          className={`relative flex items-center ${isAddingTag ? "z-50" : "z-10"}`}
+        >
           {isAddingTag ? (
             <div className="flex items-center bg-gray-900 border border-green-500/50 rounded px-1 animate-in fade-in zoom-in-95 duration-200">
               <span className="text-green-500 text-[10px] font-mono mr-1">

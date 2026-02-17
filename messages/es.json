@@ -6,6 +6,7 @@
     "versions": "<b>{count}</b> versiones",
     "found": "<b>{count}</b> encontrados",
     "newPrompt": "Nuevo Prompt",
+    "prompt": "Prompt",
     "tags": "ETIQUETAS",
     "searchPlaceholder": "Escribe para buscar... [ESPACIO] para etiqueta • [ENTER] para filtrar",
     "searchAction": "BUSCAR",
@@ -28,7 +29,50 @@
     "content": "Contenido del Prompt",
     "tags": "Etiquetas (Auto-generadas)",
     "versionHistory": "Historial de Versiones",
-    "v": "v"
+    "v": "v",
+    "translate": "Traducir",
+    "analyze": "Analizar",
+    "analyzing": "ANALIZANDO...",
+    "score": "PUNTAJE",
+    "autoSuggest": "Auto-Sugerir",
+    "autoFix": "Auto-Corregir",
+    "fixing": "Corrigiendo...",
+    "missingTranslation": "Falta traducción",
+    "englishAvailable": "Contenido en Inglés disponible",
+    "switchToEnglishMissing": "Cambiar a Inglés (Falta)",
+    "spanishAvailable": "Contenido en Español disponible",
+    "switchToSpanishMissing": "Cambiar a Español (Falta)",
+    "aiAnalysis": "Análisis IA",
+    "clarity": "Claridad",
+    "suggestions": "Sugerencias",
+    "status": {
+      "translate": {
+        "detecting": "Detectando idioma...",
+        "translating": "Traduciendo contenido...",
+        "adapting": "Adaptando matices...",
+        "finalizing": "Finalizando..."
+      },
+      "analyze": {
+        "tokenizing": "Tokenizando...",
+        "checking": "Revisando gramática...",
+        "evaluating": "Evaluando claridad...",
+        "scoring": "Calculando puntaje..."
+      },
+      "autoSuggest": {
+        "reading": "Leyendo contenido...",
+        "extracting": "Extrayendo intención...",
+        "generating": "Generando metadatos...",
+        "refining": "Refinando..."
+      },
+      "subroutine": "EJECUTANDO SUBRUTINA: {status}"
+    }
+  },
+  "SystemMonitor": {
+    "neuralLoad": "CARGA NEURONAL",
+    "memory": "MEM CTX",
+    "status": "ESTADO",
+    "idle": "EN ESPERA",
+    "processing": "PROCESANDO"
   },
   "PromptCard": {
     "copied": "Copiado",
@@ -43,11 +87,62 @@
     "noPrompts": "No se encontraron prompts",
     "adjustSearch": "Intenta ajustar tu búsqueda o filtros",
     "createFirst": "Crea tu primer prompt para empezar",
-    "createFirstBtn": "Crear Primer Prompt"
+    "createFirstBtn": "Crear Primer Prompt",
+    "saveFailed": "Error al guardar el prompt"
   },
   "System": {
     "errorTitle": "ERROR_SISTEMA",
     "close": "[ TERMINAR_LOG_ERROR ]",
     "pasteError": "ERROR_DATO_NO_COINCIDE: La transmisión interceptada contiene fragmentos no textuales. Solo paquetes de texto plano pueden ser ingresados en la bóveda."
+  },
+  "Settings": {
+    "title": "Configuración del Sistema",
+    "accessLevel": "NIVEL_ACCESO: ADMIN",
+    "tabs": {
+      "general": "General",
+      "appearance": "Apariencia",
+      "system": "Sistema"
+    },
+    "sections": {
+      "core": "Ajustes del Núcleo",
+      "coreDesc": "Configurar comportamiento global de la aplicación.",
+      "visual": "Interfaz Visual",
+      "visualDesc": "Personalizar la apariencia de la terminal.",
+      "diagnostics": "Diagnóstico del Sistema",
+      "diagnosticsDesc": "Ver rendimiento y versiones del sistema."
+    },
+    "fields": {
+      "language": "Idioma",
+      "languageDesc": "Selecciona tu idioma preferido para la interfaz.",
+      "exportLanguage": "Idioma de Exportación / Copia",
+      "exportLanguageDesc": "Idioma preferido al copiar prompts.",
+      "notifications": "Notificaciones",
+      "notificationsDesc": "Habilitar alertas y sonidos del sistema.",
+      "theme": "Tema",
+      "themeDesc": "Elige entre modo Claro y Oscuro.",
+      "reducedMotion": "Reducir Movimiento",
+      "reducedMotionDesc": "Minimizar animaciones para mejor rendimiento."
+    },
+    "options": {
+      "original": "Original (Como está escrito)",
+      "en": "Inglés (Traducir)",
+      "es": "Español (Traducir)",
+      "fr": "Francés (Traducir)",
+      "de": "Alemán (Traducir)",
+      "ja": "Japonés (Traducir)",
+      "dark": "Oscuro",
+      "light": "Claro"
+    },
+    "stats": {
+      "memory": "Uso de Memoria",
+      "latency": "Latencia API",
+      "version": "Versión",
+      "build": "Build"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "save": "Guardar Cambios",
+      "close": "Cerrar"
+    }
   }
 }

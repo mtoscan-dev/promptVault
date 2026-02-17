@@ -15,7 +15,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: ${DB_MEM_LIMIT:-512M}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
@@ -24,22 +24,19 @@ services:
     networks:
       - vault_network
 
-  # Motor de IA Local
-  ollama:
-    image: ollama/ollama
-    container_name: vault_ai
-    volumes:
-      - ./ollama_data:/root/.ollama
-    ports:
-      - "${OLLAMA_PORT}:11434"
-    environment:
-      - OLLAMA_KEEP_ALIVE=30m # El modelo se queda en RAM por 30 minutos tras el último uso
-    deploy:
-      resources:
-        limits:
-          memory: ${AI_MEM_LIMIT:-4G} # Espacio para Qwen 2.5 y Embeddings
-    networks:
-      - vault_network
+  # Motor de IA Local (DISABLED - Using Host Machine for GPU)
+  # ollama:
+  #   image: ollama/ollama
+  #   container_name: vault_ai
+  #   volumes:
+  #     - ./ollama_data:/root/.ollama
+  #   ports:
+  #     - "${OLLAMA_PORT}:11434"
+  #   environment:
+  #     - OLLAMA_KEEP_ALIVE=30m # El modelo se queda en RAM por 30 minutos tras el último uso
+  #
+  #   networks:
+  #     - vault_network
 
   # Aplicación Next.js (Drizzle + Soberanía)
   app:
@@ -50,7 +47,10 @@ services:
     restart: always
     environment:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_HOST: ${OLLAMA_HOST}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-qwen2.5:1.5b}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${PORT_APP_EXTERNAL:-3080}:3000" # Redirige 3080 a 3000
     # Los volúmenes solo son necesarios en desarrollo (Hot Reload)
@@ -66,8 +66,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      ollama:
-        condition: service_started
+      # ollama:
+      #   condition: service_started
     networks:
       - vault_network
 
