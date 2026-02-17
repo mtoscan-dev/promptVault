@@ -1,17 +1,19 @@
 import React, { useState } from "react";
 import { X, ChevronDown, ChevronRight, Hash, Tag } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
-import { TAXONOMY, SmartTag } from "@/utils/taxonomy";
+import { SmartTag, Taxonomy } from "@/types";
 import { TagBadge } from "./TagBadge";
 import { cn } from "@/utils/cn";
 
 interface TaxonomyPickerProps {
+  taxonomy: Taxonomy;
   selectedTags: SmartTag[];
   onToggleTag: (tag: SmartTag) => void;
   onClose: () => void;
 }
 
 export function TaxonomyPicker({
+  taxonomy,
   selectedTags,
   onToggleTag,
   onClose,
@@ -38,8 +40,8 @@ export function TaxonomyPicker({
   // Group tags by dimension
   // Filter out dimensions that don't have tags in the list
   const tagsByDimension: Record<string, SmartTag[]> = {};
-  TAXONOMY.dimensions.forEach((dim) => {
-    const tags = TAXONOMY.tags.filter((t) => t.dimensionId === dim.id);
+  taxonomy.dimensions.forEach((dim) => {
+    const tags = taxonomy.tags.filter((t) => t.dimensionId === dim.id);
     if (tags.length > 0) {
       tagsByDimension[dim.id] = tags as unknown as SmartTag[];
     }
@@ -65,7 +67,7 @@ export function TaxonomyPicker({
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
-        {TAXONOMY.dimensions.map((dim) => {
+        {taxonomy.dimensions.map((dim) => {
           const dimensionTags = tagsByDimension[dim.id];
           if (!dimensionTags) return null;
 

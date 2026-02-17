@@ -395,3 +395,31 @@ export async function checkAIGateway() {
     };
   }
 }
+
+export async function getTaxonomy() {
+  try {
+    const dimensions = await db.select().from(tagDimensions);
+    const tags = await db.select().from(tagsTable);
+
+    // Map DB tags to UI format (using slug as ID)
+    const mappedTags = tags.map((t) => ({
+      id: t.slug,
+      dimensionId: t.dimensionId,
+      nameEn: t.nameEn,
+      nameEs: t.nameEs,
+      descriptionEn: t.descriptionEn || "",
+      descriptionEs: t.descriptionEs || "",
+    }));
+
+    return {
+      success: true,
+      data: {
+        dimensions,
+        tags: mappedTags,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to fetch taxonomy:", error);
+    return { success: false, error: "Failed to load taxonomy" };
+  }
+}

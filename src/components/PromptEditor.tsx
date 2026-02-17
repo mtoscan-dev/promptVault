@@ -16,7 +16,13 @@ import {
 import { useTranslations, useLocale } from "next-intl";
 import { es, enUS } from "date-fns/locale";
 import { useSettings } from "@/contexts/SettingsContext";
-import { Prompt, PromptVersion, AnalysisResult, SmartTag } from "@/types";
+import {
+  Prompt,
+  PromptVersion,
+  AnalysisResult,
+  SmartTag,
+  Taxonomy,
+} from "@/types";
 import { cn } from "@/utils/cn";
 import {
   generatePromptMetadata,
@@ -25,13 +31,13 @@ import {
   suggestSmartTags,
   translatePromptFields,
   checkAIGateway,
+  getTaxonomy,
 } from "@/app/actions/forge-ai";
 import { detectLanguage } from "@/utils/languageDetection";
 import { useProcessSimulator } from "@/hooks/useProcessSimulator";
 import { PromptToolbar } from "./PromptToolbar";
 import { TagBadge } from "./TagBadge";
 import { TaxonomyPicker } from "./TaxonomyPicker";
-import { TAXONOMY } from "@/utils/taxonomy";
 
 interface PromptEditorProps {
   prompt: Prompt | null;
@@ -82,6 +88,16 @@ export function PromptEditor({
   const [selectedTags, setSelectedTags] = useState<SmartTag[]>([]);
   const [suggestedTags, setSuggestedTags] = useState<SmartTag[]>([]);
   const [showTaxonomyPicker, setShowTaxonomyPicker] = useState(false);
+  const [taxonomy, setTaxonomy] = useState<Taxonomy | null>(null);
+
+  // Fetch Taxonomy on Mount
+  useEffect(() => {
+    getTaxonomy().then((res) => {
+      if (res.success && res.data) {
+        setTaxonomy(res.data);
+      }
+    });
+  }, []);
 
   // Process Simulators
   const translateProcess = useProcessSimulator();
@@ -256,10 +272,12 @@ export function PromptEditor({
       setSelectedVersion(currentVersion || null);
 
       // Restore Tags
-      const hydratedTags = prompt.tags
-        .map((id) => TAXONOMY.tags.find((t) => t.id === id))
-        .filter((t): t is any => !!t) as SmartTag[];
-      setSelectedTags(hydratedTags);
+      if (taxonomy) {
+        const hydratedTags = prompt.tags
+          .map((id) => taxonomy.tags.find((t) => t.id === id))
+          .filter((t): t is SmartTag => !!t);
+        setSelectedTags(hydratedTags);
+      }
     } else {
       // New Prompt
       setTitle("");
@@ -276,7 +294,7 @@ export function PromptEditor({
       // Default view language to locale
       setViewLanguage(locale === "es" ? "es" : "en");
     }
-  }, [prompt, initialContent, exportLanguage, locale]);
+  }, [prompt, initialContent, exportLanguage, locale, taxonomy]);
 
   // Health Check
   useEffect(() => {
@@ -306,11 +324,36 @@ export function PromptEditor({
   useEffect(() => {
     const handler = setTimeout(() => {
       if (!content.trim() || content.length < 50) return;
+
+      // Prevent auto-tagging if:
+      // 1. We have tags assigned.
+      // 2. The content hasn't changed from the original loaded version (no modifications).
+      if (prompt && selectedTags.length > 0) {
+        // Determine the original content for the current view language
+        let originalContent = null;
+        if (viewLanguage === "es") {
+          originalContent =
+            prompt.contentEs ||
+            (prompt.content && !prompt.contentEn ? prompt.content : null);
+        } else {
+          originalContent =
+            prompt.contentEn ||
+            (prompt.content && !prompt.contentEs ? prompt.content : null);
+        }
+
+        // If content matches the original (persisted) version, skip auto-tagging
+        // But be careful: if originalContent is null, we can't compare.
+        // We only skip if content === originalContent.
+        if (content === originalContent) {
+          return;
+        }
+      }
+
       handleAutoTag();
     }, 2000); // 2s debounce
 
     return () => clearTimeout(handler);
-  }, [content]);
+  }, [content, prompt, selectedTags.length, viewLanguage]);
 
   const handleAutoTag = async () => {
     if (!content.trim()) return;
@@ -791,6 +834,14 @@ export function PromptEditor({
                 </button>
               </div>
             </div>
+            {showTaxonomyPicker && taxonomy && (
+              <TaxonomyPicker
+                taxonomy={taxonomy}
+                selectedTags={selectedTags}
+                onToggleTag={toggleTag}
+                onClose={() => setShowTaxonomyPicker(false)}
+              />
+            )}
             <div className="flex flex-wrap gap-2 p-3 bg-black/10 dark:bg-black/30 border border-(--border-primary) rounded min-h-[50px] transition-all duration-300">
               {selectedTags.length > 0 ? (
                 selectedTags.map((tag) => (
@@ -813,13 +864,7 @@ export function PromptEditor({
             </div>
 
             {/* Taxonomy Picker Side Panel */}
-            {showTaxonomyPicker && (
-              <TaxonomyPicker
-                selectedTags={selectedTags}
-                onToggleTag={toggleTag}
-                onClose={() => setShowTaxonomyPicker(false)}
-              />
-            )}
+
             {/* Suggested Tags Area */}
             {suggestedTags.length > 0 && !tagProcess.isProcessing && (
               <div className="animate-in slide-in-from-top-2 fade-in duration-500">

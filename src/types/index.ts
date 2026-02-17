@@ -43,3 +43,18 @@ export interface SmartTag {
   descriptionEs: string;
   dimensionId: string;
 }
+
+export interface TagDimension {
+  id: string;
+  nameEn: string;
+  nameEs: string;
+  descriptionEn?: string | null;
+  descriptionEs?: string | null;
+  color?: string | null;
+  icon?: string | null;
+}
+
+export interface Taxonomy {
+  dimensions: TagDimension[];
+  tags: SmartTag[];
+}
