@@ -26,8 +26,8 @@ import {
 import { cn } from "@/utils/cn";
 import {
   generatePromptMetadata,
-  analyzePrompt,
-  optimizePrompt,
+  analyzePromptEnhanced,
+  optimizePromptEnhanced,
   suggestSmartTags,
   translatePromptFields,
   checkAIGateway,
@@ -38,6 +38,7 @@ import { useProcessSimulator } from "@/hooks/useProcessSimulator";
 import { PromptToolbar } from "./PromptToolbar";
 import { TagBadge } from "./TagBadge";
 import { TaxonomyPicker } from "./TaxonomyPicker";
+import { PromptEvaluationResults } from "./PromptEvaluationResults";
 
 interface PromptEditorProps {
   prompt: Prompt | null;
@@ -69,6 +70,7 @@ export function PromptEditor({
   const { exportLanguage } = useSettings();
   const t = useTranslations("Editor");
   const locale = useLocale();
+  const isEs = locale === "es";
   const dateLocale = locale === "es" ? es : enUS;
 
   const [title, setTitle] = useState("");
@@ -582,12 +584,12 @@ export function PromptEditor({
           });
 
           const result = await Promise.race([
-            analyzePrompt(content, viewLanguage),
+            analyzePromptEnhanced(content, viewLanguage),
             timeoutPromise,
           ]);
 
           if (result.success && result.data) {
-            setAnalysisResult(result.data);
+            setAnalysisResult(result.data as AnalysisResult);
           }
           return result;
         },
@@ -599,18 +601,13 @@ export function PromptEditor({
   };
 
   const handleOptimize = async () => {
-    if (
-      !analysisResult ||
-      typeof analysisResult === "number" ||
-      !analysisResult?.suggestions.length
-    )
-      return;
+    if (!analysisResult || !analysisResult.prioritySuggestions.length) return;
 
     setIsOptimizing(true);
     try {
-      const result = await optimizePrompt(
+      const result = await optimizePromptEnhanced(
         content,
-        analysisResult.suggestions,
+        analysisResult,
         viewLanguage,
       );
 
@@ -992,96 +989,33 @@ export function PromptEditor({
 
               {/* 3. Analysis Card */}
               {analysisResult && !analyzeProcess.isProcessing && (
-                <div className="animate-in slide-in-from-right-4 duration-500 delay-300">
+                <div className="space-y-4 animate-in slide-in-from-right-4 duration-500 delay-300">
                   <div className="flex items-center gap-2 pb-2 mb-2 border-b border-(--border-primary)">
                     <BarChart2 size={14} className="text-purple-400" />
-                    <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-(--text-muted) uppercase tracking-wider">
                       Analysis Report
                     </span>
                   </div>
 
-                  <div className="bg-gradient-to-br from-purple-900/10 to-transparent rounded-xl border border-purple-500/20 p-4 space-y-4 relative overflow-hidden group hover:border-purple-500/40 transition-colors">
-                    {/* Dynamic Glow */}
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-[40px] rounded-full -mr-16 -mt-16 pointer-events-none group-hover:bg-purple-500/20 transition-all duration-700"></div>
+                  <PromptEvaluationResults data={analysisResult} />
 
-                    <div className="flex items-center justify-between relative z-10">
-                      <span className="text-xs text-(--text-muted) font-mono">
-                        Total Score
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={cn(
-                            "text-3xl font-bold font-mono tracking-tighter",
-                            analysisResult.score >= 90
-                              ? "text-green-400"
-                              : analysisResult.score >= 70
-                                ? "text-yellow-400"
-                                : "text-red-400",
-                          )}
-                        >
-                          {analysisResult.score}
-                        </span>
-                        {analysisResult.score < 100 && (
-                          <button
-                            onClick={handleOptimize}
-                            disabled={isOptimizing}
-                            className="p-1.5 bg-purple-500/10 hover:bg-purple-500/20 rounded-lg text-purple-300 transition-colors border border-purple-500/20 hover:border-purple-500/50"
-                            title={t("autoFix")}
-                          >
-                            {isOptimizing ? (
-                              <RefreshCw size={14} className="animate-spin" />
-                            ) : (
-                              <Zap size={14} />
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="w-full h-1.5 bg-black/20 rounded-full overflow-hidden">
-                      <div
-                        className={cn(
-                          "h-full transition-all duration-1000 ease-out",
-                          analysisResult.score >= 90
-                            ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"
-                            : analysisResult.score >= 70
-                              ? "bg-yellow-500"
-                              : "bg-red-500",
-                        )}
-                        style={{ width: `${analysisResult.score}%` }}
-                      />
-                    </div>
-
-                    <div className="space-y-3 relative z-10">
-                      <div className="text-xs text-(--text-primary) leading-relaxed bg-black/10 p-2 rounded border border-white/5">
-                        <span className="text-blue-400 font-bold text-[10px] uppercase block mb-1">
-                          Clarity Assessment
-                        </span>
-                        {analysisResult.clarity}
-                      </div>
-                      <div>
-                        <span className="text-yellow-400 font-bold text-[10px] uppercase block mb-2">
-                          Improvement Suggestions
-                        </span>
-                        <ul className="space-y-2">
-                          {analysisResult.suggestions
-                            .slice(0, 3)
-                            .map((s, i) => (
-                              <li
-                                key={i}
-                                className="text-[11px] text-(--text-muted) flex gap-2"
-                              >
-                                <span className="text-yellow-500/50 mt-0.5">
-                                  •
-                                </span>
-                                <span>{s}</span>
-                              </li>
-                            ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
+                  {analysisResult.totalScore < 70 && (
+                    <button
+                      onClick={handleOptimize}
+                      disabled={isOptimizing}
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl text-indigo-300 transition-all border border-indigo-500/20 hover:border-indigo-500/40 font-mono text-xs group"
+                    >
+                      {isOptimizing ? (
+                        <RefreshCw size={14} className="animate-spin" />
+                      ) : (
+                        <Zap
+                          size={14}
+                          className="text-indigo-400 group-hover:animate-pulse"
+                        />
+                      )}
+                      {isEs ? "REFINAMIENTO IA" : "AI REFINEMENT"}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
