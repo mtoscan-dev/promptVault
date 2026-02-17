@@ -13,7 +13,7 @@ import { classifyPrompt } from "@/utils/classification";
 import { TAG_COLORS } from "@/utils/styling";
 import { SystemErrorModal } from "@/components/SystemErrorModal";
 import { VaultSkeleton } from "@/components/VaultSkeleton";
-import { searchPrompts, savePrompt } from "@/lib/actions/vault";
+import { searchPrompts, savePrompt, deletePrompt } from "@/lib/actions/vault";
 
 export default function VaultPage() {
   const tCommon = useTranslations("Common");
@@ -246,10 +246,21 @@ export default function VaultPage() {
     [searchQuery, tErrors],
   );
 
-  const handleDelete = useCallback((id: string) => {
-    setPrompts((prev) => prev.filter((p) => p.id !== id));
-    // TODO: Call delete action
-  }, []);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      // Optimistic update
+      const previousPrompts = prompts;
+      setPrompts((prev) => prev.filter((p) => p.id !== id));
+
+      const result = await deletePrompt(id);
+      if (!result.success) {
+        // Rollback
+        setPrompts(previousPrompts);
+        setSystemError({ message: tErrors("deleteFailed") });
+      }
+    },
+    [prompts, tErrors],
+  );
 
   const switchVersion = useCallback((promptId: string, versionId: string) => {
     setPrompts((prev) =>

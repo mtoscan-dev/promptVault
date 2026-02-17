@@ -223,25 +223,25 @@ export function PromptEditor({
       setDescriptionEn(enDesc);
 
       // Determine Initial View Language and Active Content
-      // Logic: If preference matches a populated bucket, show that.
-      // Else show what we have.
-      let initialView: "es" | "en" = "en";
+      // Logic: Prioritize the site's current locale if it matches a populated bucket.
+      // Else fallback to the alternative language if populated.
+      // Else default to site locale (starting from scratch in that lang).
+      let initialView: "es" | "en" = locale === "es" ? "es" : "en";
 
-      if (isEsPreferred) {
+      if (locale === "es") {
         if (esContent) {
           initialView = "es";
           activeContent = esContent;
           if (esTitle) activeTitle = esTitle;
           if (esDesc) activeDesc = esDesc;
         } else if (enContent) {
-          // Fallback to EN if ES missing
           initialView = "en";
           activeContent = enContent;
           if (enTitle) activeTitle = enTitle;
           if (enDesc) activeDesc = enDesc;
         }
       } else {
-        // EN Preferred
+        // EN Site Locale
         if (enContent) {
           initialView = "en";
           activeContent = enContent;
@@ -341,17 +341,54 @@ export function PromptEditor({
     setShowVersions(false);
   };
 
+  // Unsynced Detection Logic
+  // Check if current view differs from what would be in the "other" language's historical or current sync
+  const isUnsynced = (() => {
+    if (viewLanguage === "es") {
+      // If we are in ES, compare with EN bucket
+      // But we need to know what the EN version *should* be.
+      // Actually, if we just edited ES, it's unsynced with EN until we translate.
+      // So if (title !== titleEs || desc !== descEs || content !== contentEs) AND (title !== titleEn ... wait)
+      // Simpler: if hasChanges is true, then current view is unsynced with the OTHER bucket.
+
+      // Let's check if the current fields differ from the stored bucket for THIS language
+      const modified =
+        title !== titleEs ||
+        description !== descriptionEs ||
+        content !== contentEs;
+      return modified;
+    } else {
+      const modified =
+        title !== titleEn ||
+        description !== descriptionEn ||
+        content !== contentEn;
+      return modified;
+    }
+  })();
+
   const handleTranslate = async () => {
     const isEsView = viewLanguage === "es";
     let targetLang: "es" | "en" = isEsView ? "en" : "es";
 
-    // Prepare Source Content from current view
-    const sourceContent = { title, description, content };
+    // Prepare Partial Content: Only translate fields that differ from their bucket
+    // or if the target bucket is empty.
+    const fieldsToTranslate: any = {};
+    const sourceBucked = isEsView
+      ? { t: titleEs, d: descriptionEs, c: contentEs }
+      : { t: titleEn, d: descriptionEn, c: contentEn };
+    const targetBucket = isEsView
+      ? { t: titleEn, d: descriptionEn, c: contentEn }
+      : { t: titleEs, d: descriptionEs, c: contentEs };
 
-    if (!sourceContent.title && !sourceContent.content) return;
+    if (title !== targetBucket.t) fieldsToTranslate.title = title;
+    if (description !== targetBucket.d)
+      fieldsToTranslate.description = description;
+    if (content !== targetBucket.c) fieldsToTranslate.content = content;
 
-    console.log("[PromptEditor] Starting translation...", {
-      sourceContent,
+    if (Object.keys(fieldsToTranslate).length === 0) return;
+
+    console.log("[PromptEditor] Starting partial translation...", {
+      fieldsToTranslate,
       targetLang,
     });
 
@@ -380,7 +417,7 @@ export function PromptEditor({
 
           // Race the translation against the timeout
           const result = await Promise.race([
-            translatePromptFields(sourceContent, targetLang),
+            translatePromptFields(fieldsToTranslate, targetLang),
             timeoutPromise,
           ]);
 
@@ -426,6 +463,18 @@ export function PromptEditor({
             if (result.data.title) setTitle(result.data.title);
             if (result.data.description)
               setDescription(result.data.description);
+
+            // Sync buckets so they are no longer unsynced
+            if (targetLang === "es") {
+              setContentEs(result.data.content || contentEs);
+              setTitleEs(result.data.title || titleEs);
+              setDescriptionEs(result.data.description || descriptionEs);
+            } else {
+              setContentEn(result.data.content || contentEn);
+              setTitleEn(result.data.title || titleEn);
+              setDescriptionEn(result.data.description || descriptionEn);
+            }
+
             setViewLanguage(targetLang);
           }
           return result;
@@ -533,14 +582,11 @@ export function PromptEditor({
               <div className="flex items-center bg-black/20 border border-white/10 rounded overflow-hidden ml-2">
                 <button
                   onClick={() => handleLanguageSwitch("en")}
-                  disabled={!contentEn && viewLanguage !== "en"}
                   className={cn(
                     "px-3 py-1 text-xs font-mono transition-all",
                     viewLanguage === "en"
                       ? "bg-green-500/20 text-green-400 font-bold"
-                      : !contentEn
-                        ? "text-gray-600 cursor-not-allowed opacity-50"
-                        : "text-(--text-muted) hover:text-(--text-primary) hover:bg-white/5",
+                      : "text-(--text-muted) hover:text-(--text-primary) hover:bg-white/5",
                   )}
                   title={
                     contentEn
@@ -556,14 +602,11 @@ export function PromptEditor({
                 <div className="w-px h-full bg-white/10"></div>
                 <button
                   onClick={() => handleLanguageSwitch("es")}
-                  disabled={!contentEs && viewLanguage !== "es"}
                   className={cn(
                     "px-3 py-1 text-xs font-mono transition-all",
                     viewLanguage === "es"
                       ? "bg-green-500/20 text-green-400 font-bold"
-                      : !contentEs
-                        ? "text-gray-600 cursor-not-allowed opacity-50"
-                        : "text-(--text-muted) hover:text-(--text-primary) hover:bg-white/5",
+                      : "text-(--text-muted) hover:text-(--text-primary) hover:bg-white/5",
                   )}
                   title={
                     contentEs
@@ -578,7 +621,13 @@ export function PromptEditor({
                 </button>
               </div>
 
-              {/* Warning Legend */}
+              {isUnsynced && contentEs && contentEn && (
+                <span className="text-[10px] text-yellow-400 font-mono flex items-center gap-1 ml-2">
+                  <span className="animate-pulse">●</span>{" "}
+                  {t("unsyncedChanges")}
+                </span>
+              )}
+
               {((!contentEn && viewLanguage === "es") ||
                 (!contentEs && viewLanguage === "en")) && (
                 <span className="text-[10px] text-orange-400/80 font-mono animate-pulse flex items-center gap-1">
@@ -820,6 +869,8 @@ export function PromptEditor({
           analyzeProcess={analyzeProcess}
           suggestProcess={suggestProcess}
           hasContent={!!content.trim()}
+          isTranslated={!!contentEs && !!contentEn && !isUnsynced}
+          hasMetadata={!!title.trim() && !!description.trim()}
         />
 
         {/* Footer */}

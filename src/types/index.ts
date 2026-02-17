@@ -16,6 +16,7 @@ export interface Prompt {
   descriptionEn?: string | null;
   contentEs?: string | null;
   contentEn?: string | null;
+  content?: string; // Derived/Active content
   versions: PromptVersion[];
   currentVersionId: string;
   createdAt: Date;

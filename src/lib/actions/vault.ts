@@ -177,6 +177,17 @@ export async function savePrompt(data: {
   }
 }
 
+export async function deletePrompt(id: string) {
+  try {
+    await db.delete(prompts).where(eq(prompts.id, id));
+    revalidatePath("/[locale]/(sectors)/vault");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting prompt:", error);
+    return { success: false, error: "Failed to delete prompt" };
+  }
+}
+
 // Helper to map DB result to UI type
 function mapDbPromptsToType(dbPrompts: any[]): Prompt[] {
   return dbPrompts.map((p) => ({

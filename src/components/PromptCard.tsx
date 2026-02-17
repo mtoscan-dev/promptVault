@@ -39,23 +39,24 @@ export function PromptCard({
 
   const { exportLanguage } = useSettings();
 
-  const currentVersion = prompt.versions.find(
-    (v) => v.id === prompt.currentVersionId,
-  );
-  const content = currentVersion?.content || "";
+  // Determine display content based on locale
+  const displayTitle =
+    (locale === "es" ? prompt.titleEs : prompt.titleEn) || prompt.title;
+  const displayDescription =
+    (locale === "es" ? prompt.descriptionEs : prompt.descriptionEn) ||
+    prompt.description;
+  const content = prompt.content || "";
 
   const handleCopy = async () => {
     try {
       let textToCopy = content;
-      let langTag = ""; // " [ES]", " [EN]"
+      let langTag = "";
 
-      // Logical Copy based on Export Preference
       if (exportLanguage === "es") {
         if (prompt.contentEs) {
           textToCopy = prompt.contentEs;
           langTag = " [ES]";
         } else {
-          // User requested behavior: Copy original + Warning at the bottom
           textToCopy = `${content}\n\n--------------------------------------------------\n[SYSTEM]: The prompt does not exist in the selected export language (${exportLanguage.toUpperCase()}).\n[SISTEMA]: El prompt no existe en el idioma de exportación seleccionado.`;
           langTag = " [ORIGINAL]";
         }
@@ -68,17 +69,9 @@ export function PromptCard({
           langTag = " [ORIGINAL]";
         }
       }
-      // Add other languages checks if we support storage for them later
-      // For now, if it's 'original' or unsupported storage lang, we default to content.
 
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
-
-      // Update the toast message to reflect what happened
-      // We rely on the UI to show "Copied" but we can add the tag visually if we want
-      // For now the generic "Copied" is shown, but let's try to update the state to show language?
-      // The current UI just shows "Copied" icon or text.
-
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
@@ -96,10 +89,13 @@ export function PromptCard({
 
   return (
     <div
-      className="group relative overflow-hidden bg-(--bg-surface) border border-(--border-primary) rounded-lg p-3 hover:border-green-600/50 transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-green-900/20 active:translate-y-0"
-      onClick={handleCopy}
+      className="group relative overflow-hidden bg-(--bg-surface) border border-(--border-primary) rounded-lg p-3 hover:border-green-500/50 transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-green-900/20 active:translate-y-0 h-full flex flex-col"
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect(prompt);
+      }}
     >
-      {/* ... previous overlays ... */}
+      {/* Copied Overlay */}
       <div
         className={`absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300 ${
           copied
@@ -119,6 +115,7 @@ export function PromptCard({
         </div>
       </div>
 
+      {/* Delete Confirmation Overlay */}
       <div
         className={`absolute inset-0 z-30 flex items-center justify-center bg-(--bg-surface)/95 backdrop-blur-md transition-all duration-300 ${
           showDeleteConfirm
@@ -173,23 +170,29 @@ export function PromptCard({
 
       {/* Header */}
       <div className="relative flex items-start justify-between gap-2 mb-2">
-        <div className="flex-1">
-          <h3 className="text-green-400 font-mono font-bold text-base flex items-center gap-2 group-hover:text-green-300 transition-colors">
-            <span className="text-gray-500">$</span>
-            {prompt.title}
+        <div className="flex-1 min-w-0">
+          <h3
+            className="text-green-400 font-mono font-bold text-base flex items-start gap-2 group-hover:text-green-300 transition-colors line-clamp-2 min-h-12 tracking-tight leading-snug"
+            title={displayTitle}
+          >
+            <span className="text-gray-500 mt-1 select-none">$</span>
+            {displayTitle}
           </h3>
-          <p className="text-(--text-secondary) text-[10px] font-mono leading-tight">
-            # {prompt.description}
+          <p
+            className="text-(--text-secondary) text-[10px] font-mono leading-relaxed mt-1 line-clamp-3 overflow-hidden text-ellipsis"
+            title={displayDescription}
+          >
+            {displayDescription}
           </p>
         </div>
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
-          {/* New Copy Button */}
+        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
+          {/* Copy Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
-              handleCopy(); // Call handleCopy here
+              handleCopy();
             }}
-            className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors flex items-center" // Added flex items-center for text alignment
+            className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors flex items-center justify-center"
             title={copied ? "Copied!" : "Copy to clipboard"}
           >
             {copied ? (
@@ -197,20 +200,13 @@ export function PromptCard({
             ) : (
               <Copy size={14} />
             )}
-            {copied && (
-              <span className="ml-1 text-[10px] text-green-400 font-mono">
-                {exportLanguage !== "original"
-                  ? `[${exportLanguage.toUpperCase()}]`
-                  : ""}
-              </span>
-            )}
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
               onSelect(prompt);
             }}
-            className="p-1.5 text-(--text-muted) hover:text-green-400 hover:bg-(--bg-surface-hover) rounded transition-colors"
+            className="p-1.5 text-(--text-muted) hover:text-green-400 hover:bg-(--bg-surface-hover) rounded transition-colors flex items-center justify-center"
             title={t("edit")}
           >
             <Edit3 size={16} />
@@ -220,7 +216,7 @@ export function PromptCard({
               e.stopPropagation();
               setShowDeleteConfirm(true);
             }}
-            className="p-1.5 text-(--text-muted) hover:text-red-400 hover:bg-(--bg-surface-hover) rounded transition-colors"
+            className="p-1.5 text-(--text-muted) hover:text-red-400 hover:bg-(--bg-surface-hover) rounded transition-colors flex items-center justify-center"
             title={t("delete")}
           >
             <Trash2 size={16} />
@@ -229,14 +225,14 @@ export function PromptCard({
       </div>
 
       {/* Content preview */}
-      <div className="bg-black/10 dark:bg-black/40 rounded p-2 mb-2 border border-(--border-primary)">
-        <pre className="text-(--text-secondary) text-xs font-mono whitespace-pre-wrap line-clamp-2">
+      <div className="bg-zinc-950 rounded-md p-3 mb-3 border border-white/5 shadow-inner grow">
+        <pre className="text-green-400/80 text-xs font-mono whitespace-pre-wrap line-clamp-4 leading-relaxed tracking-wide select-none">
           {content}
         </pre>
       </div>
 
       {/* Tags */}
-      <div className="flex flex-wrap gap-1 mb-2">
+      <div className="flex flex-wrap gap-1 mb-2 mt-auto">
         {prompt.tags.map((tag) => (
           <div
             key={tag}
@@ -323,21 +319,24 @@ export function PromptCard({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between text-xs text-(--text-muted) font-mono">
+      <div className="flex items-center justify-between text-xs text-(--text-muted) font-mono pt-2 border-t border-white/5">
         <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1">
-            <GitBranch size={12} />v{prompt.versions.length}
+          <span className="flex items-center gap-1 text-[10px]">
+            <GitBranch size={10} />v{prompt.versions.length}
           </span>
-          <span className="flex items-center gap-1" suppressHydrationWarning>
-            <Clock size={12} />
+          <span
+            className="flex items-center gap-1 text-[10px]"
+            suppressHydrationWarning
+          >
+            <Clock size={10} />
             {formatDistanceToNow(prompt.updatedAt, {
               locale: dateLocale,
               addSuffix: true,
             })}
           </span>
         </div>
-        <span className="text-(--text-muted) opacity-60">
-          id:{prompt.id.slice(0, 8)}
+        <span className="text-(--text-muted) opacity-40 text-[10px]">
+          id:{prompt.id.slice(0, 4)}
         </span>
       </div>
     </div>

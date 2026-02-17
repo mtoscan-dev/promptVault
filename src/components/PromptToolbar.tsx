@@ -12,6 +12,8 @@ interface PromptToolbarProps {
   analyzeProcess: any;
   suggestProcess: any;
   hasContent: boolean;
+  isTranslated?: boolean;
+  hasMetadata?: boolean;
   className?: string;
 }
 
@@ -23,6 +25,8 @@ export function PromptToolbar({
   analyzeProcess,
   suggestProcess,
   hasContent,
+  isTranslated,
+  hasMetadata,
   className,
 }: PromptToolbarProps) {
   const t = useTranslations("Editor");
@@ -50,10 +54,10 @@ export function PromptToolbar({
         {/* Translate Button */}
         <ToolbarButton
           onClick={onTranslate}
-          disabled={translateProcess.isProcessing}
+          disabled={translateProcess.isProcessing || isTranslated}
           isActive={translateProcess.isProcessing}
           icon={Languages}
-          title={t("translate")}
+          title={isTranslated ? t("alreadyTranslated") : t("translate")}
           color="blue"
         />
 
@@ -70,10 +74,10 @@ export function PromptToolbar({
         {/* Auto-Suggest Button */}
         <ToolbarButton
           onClick={onAutoSuggest}
-          disabled={suggestProcess.isProcessing || !hasContent}
+          disabled={suggestProcess.isProcessing || !hasContent || hasMetadata}
           isActive={suggestProcess.isProcessing}
           icon={Sparkles}
-          title={t("autoSuggest")}
+          title={hasMetadata ? t("metadataComplete") : t("autoSuggest")}
           color="yellow"
         />
 

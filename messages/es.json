@@ -45,6 +45,9 @@
     "aiAnalysis": "Análisis IA",
     "clarity": "Claridad",
     "suggestions": "Sugerencias",
+    "alreadyTranslated": "Ya Traducido",
+    "unsyncedChanges": "Cambios sin traducir",
+    "metadataComplete": "Metadatos Completos",
     "status": {
       "translate": {
         "detecting": "Detectando idioma...",
