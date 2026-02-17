@@ -10,7 +10,9 @@ import {
   pgEnum,
   customType,
   boolean,
+  primaryKey,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm"; // Added for relational queries
 
 // Helper para pgvector (Ajustado a 768 dimensiones para modelos como Nomic o Qwen)
 const vector = customType<{ data: number[]; driverData: string }>({
@@ -34,6 +36,17 @@ export const govTypeEnum = pgEnum("gov_type", [
   "tool_config",
 ]);
 
+// La tabla de dimensiones ahora será una entidad propia para soportar metadatos bilingües
+export const tagDimensions = pgTable("tag_dimensions", {
+  id: varchar("id", { length: 50 }).primaryKey(), // e.g. 'tech', 'task', 'industry'
+  nameEn: text("name_en").notNull(),
+  nameEs: text("name_es").notNull(),
+  descriptionEn: text("description_en"),
+  descriptionEs: text("description_es"),
+  color: varchar("color", { length: 50 }), // Para la UI
+  icon: varchar("icon", { length: 50 }), // Para Lucide icons
+});
+
 // Tabla de Prompts (Vault Knowledge)
 export const prompts = pgTable("prompts", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -55,6 +68,7 @@ export const prompts = pgTable("prompts", {
   versions: jsonb("versions").default([]).notNull(), // History of changes
 
   // Metadata
+  // Mantenemos tags array como caché de lectura rápida
   tags: text("tags").array().default([]).notNull(),
   domain: varchar("domain", { length: 100 }),
 
@@ -111,3 +125,70 @@ export const settings = pgTable("settings", {
 
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// --- Intelligent Tagging System ---
+
+// Tabla de Etiquetas Enriquecida
+export const tags = pgTable("tags", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  dimensionId: varchar("dimension_id", { length: 50 })
+    .references(() => tagDimensions.id, { onDelete: "cascade" })
+    .notNull(),
+
+  // Nombres Bilingües
+  nameEn: text("name_en").notNull(),
+  nameEs: text("name_es").notNull(),
+
+  // Descripciones para la LLM (Anclaje Semántico)
+  descriptionEn: text("description_en"),
+  descriptionEs: text("description_es"),
+
+  slug: varchar("slug", { length: 100 }).unique().notNull(),
+  count: integer("count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Tabla de Relación (Many-to-Many) con Borrado en Cascada
+export const promptTags = pgTable(
+  "prompt_tags",
+  {
+    promptId: uuid("prompt_id")
+      .references(() => prompts.id, { onDelete: "cascade" })
+      .notNull(),
+    tagId: uuid("tag_id")
+      .references(() => tags.id, { onDelete: "cascade" })
+      .notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.promptId, t.tagId] }),
+  }),
+);
+
+// --- Drizzle Relations ---
+
+export const promptTagsRelations = relations(promptTags, ({ one }) => ({
+  prompt: one(prompts, {
+    fields: [promptTags.promptId],
+    references: [prompts.id],
+  }),
+  tag: one(tags, {
+    fields: [promptTags.tagId],
+    references: [tags.id],
+  }),
+}));
+
+export const promptsRelations = relations(prompts, ({ many }) => ({
+  promptTags: many(promptTags),
+}));
+
+export const tagsRelations = relations(tags, ({ one, many }) => ({
+  dimension: one(tagDimensions, {
+    fields: [tags.dimensionId],
+    references: [tagDimensions.id],
+  }),
+  prompts: many(promptTags),
+}));
+
+export const tagDimensionsRelations = relations(tagDimensions, ({ many }) => ({
+  tags: many(tags),
+}));
