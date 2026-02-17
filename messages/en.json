@@ -72,6 +72,12 @@
         "generating": "Generating metadata...",
         "refining": "Refining..."
       },
+      "tagging": {
+        "analyzing": "Analyzing content...",
+        "referencing": "Referencing taxonomy...",
+        "categorizing": "Categorizing...",
+        "validating": "Validating tags..."
+      },
       "subroutine": "RUNNING SUBROUTINE: {status}"
     }
   },

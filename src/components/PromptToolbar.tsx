@@ -45,7 +45,7 @@ export function PromptToolbar({
   return (
     <div
       className={cn(
-        "absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-50 pointer-events-none",
+        "absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-[60] pointer-events-none",
         className,
       )}
     >

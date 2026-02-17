@@ -49,6 +49,7 @@
     "unsyncedChanges": "Cambios sin traducir",
     "metadataComplete": "Metadatos Completos",
     "tagsActive": "Activas",
+    "addTag": "Agregar",
     "noTagsAssigned": "Sin etiquetas asignadas",
     "aiSuggestions": "Sugerencias IA",
     "applyAll": "Aplicar Todo",
@@ -71,6 +72,12 @@
         "extracting": "Extrayendo intención...",
         "generating": "Generando metadatos...",
         "refining": "Refinando..."
+      },
+      "tagging": {
+        "analyzing": "Analizando contenido...",
+        "referencing": "Referenciando taxonomía...",
+        "categorizing": "Categorizando...",
+        "validating": "Validando etiquetas..."
       },
       "subroutine": "EJECUTANDO SUBRUTINA: {status}"
     }

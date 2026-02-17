@@ -1,13 +1,16 @@
 "use server";
 
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, generateObject } from "ai";
+import { streamText, generateObject, generateText } from "ai";
 import { z } from "zod";
 
 // Create an OpenAI provider instance that points to our local Ollama
 // We use the OpenAI compatibility layer of Ollama
+const ollamaBaseUrl = process.env.OLLAMA_HOST + "/v1";
+console.log("[ForgeAI] Initializing Ollama provider at:", ollamaBaseUrl);
+
 const ollama = createOpenAI({
-  baseURL: process.env.OLLAMA_HOST + "/v1", // e.g. http://ollama:11434/v1
+  baseURL: ollamaBaseUrl, // e.g. http://host.docker.internal:11434/v1
   apiKey: "ollama", // Ollama doesn't require a key, but the SDK expects one
 });
 
@@ -286,7 +289,8 @@ export async function optimizePrompt(
   }
 }
 
-import { TAXONOMY } from "@/utils/taxonomy";
+import { db } from "@/db";
+import { tags as tagsTable, tagDimensions } from "@/db/schema";
 import { SmartTag } from "@/types";
 
 export async function suggestSmartTags(content: string, locale: string = "en") {
@@ -296,28 +300,37 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
   try {
     const isSpanish = locale === "es";
 
-    // Flatten tags for context
-    const tagsContext = TAXONOMY.tags
+    // 1. Fetch Taxomony from Database
+    const allTags = await db.select().from(tagsTable);
+    const allDimensions = await db.select().from(tagDimensions);
+
+    // 2. Build Context for LLM
+    const tagsContext = allTags
       .map((t) => {
         const desc = isSpanish ? t.descriptionEs : t.descriptionEn;
         const name = isSpanish ? t.nameEs : t.nameEn;
-        return `- [${t.id}] ${name} (${t.dimensionId}): ${desc}`;
+        // Optimization: Include Dimension Name for better context
+        const paramDim = allDimensions.find((d) => d.id === t.dimensionId);
+        const dimName = isSpanish ? paramDim?.nameEs : paramDim?.nameEn;
+
+        return `- [${t.slug}] (${dimName}): ${name} - ${desc}`;
       })
       .join("\n");
 
     const systemPrompt = `
     ROLE: Expert Taxonomy Specialist and Content Classifier.
     
-    TASK: Analyze the provided prompt content and extract relevant tags from the provided list.
+    TASK: Analyze the provided prompt content and assign relevant tags from the database.
     
-    TAXONOMY LIST:
+    TAXONOMY DATABASE:
     ${tagsContext}
     
     RULES:
     1. Select ONLY tags that strictly apply to the content.
-    2. detailed analysis of the semantic intent.
-    3. Return a JSON array of tag IDs (e.g. ["seo", "dev"]).
+    2. Analyze the semantic intent of the prompt.
+    3. Return a JSON array of tag IDs (the values in brackets [] e.g. "seo").
     4. Max 5 tags.
+    5. OUTPUT FORMAT: JSON Object with "tagIds" array.
     `;
 
     const { object } = await generateObject({
@@ -325,29 +338,88 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
       schema: z.object({
         tagIds: z
           .array(z.string())
-          .describe("List of relevant tag IDs from the taxonomy."),
+          .describe("List of relevant tag IDs (slugs) from the taxonomy."),
       }),
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content },
       ],
-      temperature: 0.2, // Low temp for classification
+      temperature: 0.1, // Low temp for precision
     });
 
     console.log("[ForgeAI] Suggested Tag IDs:", object.tagIds);
 
-    // Hydrate tags
+    // 3. Hydrate tags from DB records
+    // We map the DB 'slug' to the 'id' field expected by the UI/SmartTag interface
     const hydratedTags = object.tagIds
-      .map((id) => TAXONOMY.tags.find((t) => t.id === id))
-      .filter((t): t is any => !!t) // Filter undefined
+      .map((slug) => allTags.find((t) => t.slug === slug))
+      .filter((t): t is (typeof allTags)[0] => !!t)
       .map((t) => ({
-        ...t,
-        // Ensure type compatibility if needed, though structure matches SmartTag
+        id: t.slug, // UI expects 'id' for selection
+        nameEn: t.nameEn,
+        nameEs: t.nameEs,
+        descriptionEn: t.descriptionEn || "",
+        descriptionEs: t.descriptionEs || "",
+        dimensionId: t.dimensionId,
       })) as SmartTag[];
 
     return { success: true, data: hydratedTags };
   } catch (error) {
     console.error("Tag Suggestion Error:", error);
     return { success: false, error: "Failed to suggest tags." };
+  }
+}
+
+export async function checkAIGateway() {
+  try {
+    const model = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    console.log(`[ForgeAI] Checking health with model: ${model}`);
+
+    // Simple fast check
+    const { text } = await generateText({
+      model: ollama(model),
+      prompt: "respond with 'ok'",
+    });
+
+    return { success: true, model, status: text };
+  } catch (error: any) {
+    console.error(`[ForgeAI] Health Check Failed: ${error.message}`);
+    const host = process.env.OLLAMA_HOST || "unknown";
+    return {
+      success: false,
+      error: error.message,
+      host,
+      hint: host.includes("localhost")
+        ? "Docker container cannot reach 'localhost'. Use 'host.docker.internal' and ensure Ollama binds to 0.0.0.0"
+        : "Check Ollama logs",
+    };
+  }
+}
+
+export async function getTaxonomy() {
+  try {
+    const dimensions = await db.select().from(tagDimensions);
+    const tags = await db.select().from(tagsTable);
+
+    // Map DB tags to UI format (using slug as ID)
+    const mappedTags = tags.map((t) => ({
+      id: t.slug,
+      dimensionId: t.dimensionId,
+      nameEn: t.nameEn,
+      nameEs: t.nameEs,
+      descriptionEn: t.descriptionEn || "",
+      descriptionEs: t.descriptionEs || "",
+    }));
+
+    return {
+      success: true,
+      data: {
+        dimensions,
+        tags: mappedTags,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to fetch taxonomy:", error);
+    return { success: false, error: "Failed to load taxonomy" };
   }
 }
