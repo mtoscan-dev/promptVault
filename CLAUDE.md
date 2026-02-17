@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-The application uses a **centralized state management pattern** in the main page component (`src/app/page.tsx`) with child components receiving state and callbacks via props.
+The application uses a **centralized state management pattern** combined with **Server Actions** and **Drizzle ORM** for persistence. The UI is orchestrated from `src/components/forge/ForgeWorkspace.tsx` and its descendants, which are rendered within the localized route `src/app/[locale]/page.tsx`.
 
 ### Core Data Model
 
@@ -38,7 +38,12 @@ Prompt
 
 ### Component Structure
 
-- **`page.tsx`**: Main orchestration component managing global state (prompts, tags, search, selected items), filtering logic, and modal state. Handles all CRUD operations and version switching.
+- **`src/app/[locale]/page.tsx`**: Entry point for the Forge workspace. Fetches initial data via server-side queries.
+- **`ForgeWorkspace.tsx`**: Main orchestration component for the Forge environment.
+- **`IngredientsPanel.tsx`**, **`AssemblyArea.tsx`**, **`OutputStream.tsx`**: Core modular components of the Forge interface.
+- **`TerminalSearch.tsx`**: Terminal-style search input with tag autocomplete. Uses space to select tags, backspace to remove, and enter to confirm.
+- **`PromptCard.tsx`**: Individual prompt display showing title, description, tags, and version count. Includes delete and edit triggers.
+- **`PromptEditor.tsx`**: Modal for creating/editing prompts with title, description, content fields and version history dropdown. Supports multi-language translation and AI analysis.
 - **`TerminalSearch.tsx`**: Terminal-style search input with tag autocomplete. Uses space to select tags, backspace to remove, and enter to confirm.
 - **`PromptCard.tsx`**: Individual prompt display showing title, description, tags, and version count. Includes delete and edit triggers.
 - **`PromptEditor.tsx`**: Modal for creating/editing prompts with title, description, content fields and version history dropdown.
@@ -59,7 +64,7 @@ Prompt
 4. **Save Operation**: Creates new `PromptVersion` with UUID and incremented version number, auto-tags via `classifyPrompt()`, updates `currentVersionId`
 5. **Version Switching**: Updates `currentVersionId` pointer without modifying version history
 
-All data currently persists in component state only (should be moved to localStorage or a backend for persistence).
+All data is persisted in a **PostgreSQL database** via **Drizzle ORM**. Server actions in `src/app/actions/` handle data mutations and AI-powered operations (translations, suggestions, analysis).
 
 ## Commands
 
@@ -104,4 +109,3 @@ pnpm run lint
 - Styling is utility-first Tailwind with a monospace font for terminal aesthetic
 - The app follows a fixed header, scrollable main content, fixed footer layout
 - Green color (`green-400`, `green-600`) used as primary accent color throughout
-
