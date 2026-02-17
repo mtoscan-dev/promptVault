@@ -634,423 +634,475 @@ export function PromptEditor({
       description !== prompt.description
     : title.trim() !== "" || content.trim() !== "";
 
+  // Compact Language Switcher
+  const LanguageSwitcher = () => (
+    <div className="flex items-center bg-black/5 dark:bg-black/40 border border-black/5 dark:border-white/10 rounded-lg p-1 ml-2 sm:ml-4 gap-1">
+      <button
+        onClick={() => handleLanguageSwitch("en")}
+        className={cn(
+          "relative px-3 py-1 text-xs font-mono rounded transition-all flex items-center gap-2",
+          viewLanguage === "en"
+            ? "bg-(--bg-surface-active) text-(--acc-primary) shadow-sm font-bold"
+            : "text-(--text-muted) hover:text-(--text-primary) hover:bg-black/5 dark:hover:bg-white/5",
+        )}
+        title={contentEn ? t("englishAvailable") : t("switchToEnglishMissing")}
+      >
+        <span>EN</span>
+        <div
+          className={cn(
+            "w-1.5 h-1.5 rounded-full transition-colors",
+            contentEn
+              ? viewLanguage === "en"
+                ? "bg-green-500"
+                : "bg-green-500/50"
+              : "bg-transparent border border-(--text-muted)",
+          )}
+        />
+      </button>
+      <div className="w-px h-4 bg-black/5 dark:bg-white/10 mx-0.5"></div>
+      <button
+        onClick={() => handleLanguageSwitch("es")}
+        className={cn(
+          "relative px-3 py-1 text-xs font-mono rounded transition-all flex items-center gap-2",
+          viewLanguage === "es"
+            ? "bg-(--bg-surface-active) text-(--acc-primary) shadow-sm font-bold"
+            : "text-(--text-muted) hover:text-(--text-primary) hover:bg-black/5 dark:hover:bg-white/5",
+        )}
+        title={contentEs ? t("spanishAvailable") : t("switchToSpanishMissing")}
+      >
+        <span>ES</span>
+        <div
+          className={cn(
+            "w-1.5 h-1.5 rounded-full transition-colors",
+            contentEs
+              ? viewLanguage === "es"
+                ? "bg-green-500"
+                : "bg-green-500/50"
+              : "bg-transparent border border-(--text-muted)",
+          )}
+        />
+      </button>
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-(--bg-surface) border border-(--border-primary) rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl relative">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-(--border-primary)">
-          <div className="flex items-center gap-3">
-            <span className="text-green-400 font-mono">
+    <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-(--bg-surface) border border-(--border-primary) rounded-xl w-full max-w-7xl h-[90vh] flex flex-col shadow-2xl relative overflow-hidden ring-1 ring-white/10">
+        {/* Header - Compact & refined */}
+        <div className="shrink-0 flex items-center justify-between p-3 border-b border-(--border-primary) bg-(--bg-surface)">
+          <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar">
+            <span className="text-green-400 font-mono text-xs sm:text-sm px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20 whitespace-nowrap">
               {isNewPrompt ? "$ new_prompt" : "$ edit_prompt"}
             </span>
 
-            {/* Language Toggle */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center bg-black/20 border border-white/10 rounded overflow-hidden ml-2">
-                <button
-                  onClick={() => handleLanguageSwitch("en")}
-                  className={cn(
-                    "px-3 py-1 text-xs font-mono transition-all",
-                    viewLanguage === "en"
-                      ? "bg-green-500/20 text-green-400 font-bold"
-                      : "text-(--text-muted) hover:text-(--text-primary) hover:bg-white/5",
-                  )}
-                  title={
-                    contentEn
-                      ? t("englishAvailable")
-                      : t("switchToEnglishMissing")
-                  }
-                >
-                  EN
-                  {contentEn && (
-                    <span className="inline-block w-1 h-1 rounded-full bg-green-500 ml-1 mb-0.5"></span>
-                  )}
-                </button>
-                <div className="w-px h-full bg-white/10"></div>
-                <button
-                  onClick={() => handleLanguageSwitch("es")}
-                  className={cn(
-                    "px-3 py-1 text-xs font-mono transition-all",
-                    viewLanguage === "es"
-                      ? "bg-green-500/20 text-green-400 font-bold"
-                      : "text-(--text-muted) hover:text-(--text-primary) hover:bg-white/5",
-                  )}
-                  title={
-                    contentEs
-                      ? t("spanishAvailable")
-                      : t("switchToSpanishMissing")
-                  }
-                >
-                  ES
-                  {contentEs && (
-                    <span className="inline-block w-1 h-1 rounded-full bg-green-500 ml-1 mb-0.5"></span>
-                  )}
-                </button>
-              </div>
+            <LanguageSwitcher />
 
-              {isUnsynced && contentEs && contentEn && (
-                <span className="text-[10px] text-yellow-400 font-mono flex items-center gap-1 ml-2">
-                  <span className="animate-pulse">●</span>{" "}
-                  {t("unsyncedChanges")}
-                </span>
-              )}
+            {/* Unsynced Warning */}
+            {isUnsynced && contentEs && contentEn && (
+              <span className="hidden sm:flex text-[10px] text-yellow-400 font-mono items-center gap-1 ml-2 animate-pulse whitespace-nowrap">
+                <span>●</span> {t("unsyncedChanges")}
+              </span>
+            )}
+          </div>
 
-              {((!contentEn && viewLanguage === "es") ||
-                (!contentEs && viewLanguage === "en")) && (
-                <span className="text-[10px] text-orange-400/80 font-mono animate-pulse flex items-center gap-1">
-                  <span className="text-orange-500">⚠</span>{" "}
-                  {t("missingTranslation")}
-                </span>
-              )}
-            </div>
+          <div className="flex items-center gap-2 pl-2">
+            {prompt && showVersions && (
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setShowVersions(false)}
+              />
+            )}
 
             {prompt && (
-              <div className="relative ml-2">
+              <div className="relative">
                 <button
                   onClick={() => setShowVersions(!showVersions)}
-                  className="flex items-center gap-2 px-3 py-1 bg-(--bg-surface-hover) rounded text-sm font-mono text-(--text-primary) hover:bg-(--bg-surface-active) transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-(--bg-surface-hover) rounded text-xs font-mono text-(--text-primary) hover:bg-(--bg-surface-active) transition-colors border border-transparent hover:border-(--border-primary)"
                 >
                   <GitBranch size={14} className="text-purple-400" />
-                  {t("v")}
-                  {selectedVersion?.versionNumber || prompt.versions.length}
+                  <span className="hidden sm:inline">
+                    v{selectedVersion?.versionNumber || prompt.versions.length}
+                  </span>
                   <ChevronDown size={14} />
                 </button>
 
                 {showVersions && (
-                  <div className="absolute top-full left-0 mt-1 bg-(--bg-surface) border border-(--border-primary) rounded shadow-lg z-10 min-w-[250px]">
-                    <div className="p-2 border-b border-(--border-primary) text-xs text-(--text-muted) font-mono uppercase tracking-tighter">
+                  <div className="absolute top-full right-0 mt-2 bg-(--bg-surface) border border-(--border-primary) rounded-lg shadow-xl z-20 min-w-[260px] overflow-hidden animate-in slide-in-from-top-2">
+                    <div className="p-2 border-b border-(--border-primary) text-[10px] text-(--text-muted) font-mono uppercase tracking-wider bg-(--bg-surface-muted)">
                       {t("versionHistory")}
                     </div>
-                    {prompt.versions
-                      .slice()
-                      .reverse()
-                      .map((version) => (
-                        <button
-                          key={version.id}
-                          onClick={() => handleVersionSelect(version)}
-                          className={cn(
-                            "w-full px-3 py-2 text-left text-sm font-mono flex items-center justify-between hover:bg-(--bg-surface-hover) transition-colors",
-                            version.id === selectedVersion?.id
-                              ? "bg-(--bg-surface-active) text-(--acc-primary)"
-                              : "text-(--text-primary)",
-                          )}
-                        >
-                          <span className="flex items-center gap-2">
-                            <GitBranch size={12} />
-                            Version {version.versionNumber}
-                          </span>
-                          <span className="text-xs text-gray-500 flex items-center gap-1">
-                            <Clock size={10} />
-                            {format(version.createdAt, "MMM d, yyyy", {
-                              locale: dateLocale,
-                            })}
-                          </span>
-                        </button>
-                      ))}
+                    <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                      {prompt.versions
+                        .slice()
+                        .reverse()
+                        .map((version) => (
+                          <button
+                            key={version.id}
+                            onClick={() => handleVersionSelect(version)}
+                            className={cn(
+                              "w-full px-4 py-3 text-left text-xs font-mono flex items-center justify-between hover:bg-(--bg-surface-hover) transition-colors border-l-2",
+                              version.id === selectedVersion?.id
+                                ? "bg-(--bg-surface-active) text-(--acc-primary) border-purple-400"
+                                : "text-(--text-primary) border-transparent",
+                            )}
+                          >
+                            <div className="flex flex-col gap-0.5">
+                              <span className="flex items-center gap-2 font-bold">
+                                v{version.versionNumber}
+                                {version.id === prompt.currentVersionId && (
+                                  <span className="text-[9px] px-1 rounded bg-green-500/20 text-green-400 border border-green-500/30">
+                                    CURRENT
+                                  </span>
+                                )}
+                              </span>
+                              <span className="text-[10px] text-(--text-muted) opacity-70">
+                                {/* Could add commit message style summary here if available */}
+                                Changes saved
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-(--text-muted) flex items-center gap-1">
+                              {format(version.createdAt, "MMM d, HH:mm", {
+                                locale: dateLocale,
+                              })}
+                            </span>
+                          </button>
+                        ))}
+                    </div>
                   </div>
                 )}
               </div>
             )}
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-surface-hover) rounded transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-auto p-4 space-y-4 pb-24">
-          {/* Title */}
-          <div>
-            <label className="block text-xs text-(--text-muted) font-mono mb-1 uppercase tracking-tighter">
-              {t("promptTitle")} ({viewLanguage.toUpperCase()})
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                }}
-                placeholder="..."
-                className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--acc-primary) font-mono focus:outline-none focus:border-green-600 transition-colors pr-8"
-              />
-              {suggestProcess.isProcessing && !title.trim() && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <Sparkles
-                    size={14}
-                    className="text-yellow-400 animate-pulse"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
+            <div className="w-px h-6 bg-(--border-primary) mx-1 hidden sm:block" />
 
-          {/* Description */}
-          <div>
-            <label className="block text-xs text-(--text-muted) font-mono mb-1 uppercase tracking-tighter">
-              {t("description")}
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => {
-                  setDescription(e.target.value);
-                }}
-                placeholder="..."
-                className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--text-primary) font-mono text-sm focus:outline-none focus:border-green-600 transition-colors pr-8"
-              />
-              {suggestProcess.isProcessing && !description.trim() && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <Sparkles
-                    size={14}
-                    className="text-yellow-400 animate-pulse"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Tagging UI */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs text-(--text-muted) font-mono uppercase tracking-tighter">
-                {t("tags")}
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-gray-500">
-                  {selectedTags.length} {t("tagsActive")}
-                </span>
-                <button
-                  onClick={() => setShowTaxonomyPicker(!showTaxonomyPicker)}
-                  className="p-1 px-2 text-[10px] bg-(--bg-surface-active) hover:bg-(--bg-surface-hover) border border-(--border-primary) rounded flex items-center gap-1 transition-colors text-(--text-primary)"
-                  title="Browse Taxonomy"
-                >
-                  <Plus size={10} />
-                  {t("addTag")}
-                </button>
-              </div>
-            </div>
-            {showTaxonomyPicker && taxonomy && (
-              <TaxonomyPicker
-                taxonomy={taxonomy}
-                selectedTags={selectedTags}
-                onToggleTag={toggleTag}
-                onClose={() => setShowTaxonomyPicker(false)}
-              />
-            )}
-            <div className="flex flex-wrap gap-2 p-3 bg-black/10 dark:bg-black/30 border border-(--border-primary) rounded min-h-[50px] transition-all duration-300">
-              {selectedTags.length > 0 ? (
-                selectedTags.map((tag) => (
-                  <button
-                    key={tag.id}
-                    onClick={() => toggleTag(tag)}
-                    className="group"
-                  >
-                    <TagBadge
-                      name={locale === "es" ? tag.nameEs : tag.nameEn}
-                      className="cursor-pointer hover:bg-red-500/20 border-green-500/30 transition-colors"
-                    />
-                  </button>
-                ))
-              ) : (
-                <div className="text-xs text-gray-600 font-mono italic">
-                  {t("noTagsAssigned")}
-                </div>
-              )}
-            </div>
-
-            {/* Taxonomy Picker Side Panel */}
-
-            {/* Suggested Tags Area */}
-            {suggestedTags.length > 0 && !tagProcess.isProcessing && (
-              <div className="animate-in slide-in-from-top-2 fade-in duration-500">
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles size={12} className="text-blue-400 animate-pulse" />
-                  <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest">
-                    {t("aiSuggestions")}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2 p-2 bg-blue-500/5 border border-blue-500/20 rounded-lg">
-                  {suggestedTags.map((tag) => (
-                    <button
-                      key={tag.id}
-                      onClick={() => toggleTag(tag)}
-                      className="animate-glow-blue"
-                    >
-                      <TagBadge
-                        name={locale === "es" ? tag.nameEs : tag.nameEn}
-                        className="cursor-pointer border-blue-500/30 bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.2)]"
-                      />
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => {
-                      suggestedTags.forEach((t) => toggleTag(t));
-                      setSuggestedTags([]);
-                    }}
-                    className="text-[10px] font-mono text-blue-300 hover:text-blue-200 px-2 py-1 rounded hover:bg-blue-500/10 transition-colors"
-                  >
-                    + {t("applyAll")}
-                  </button>
-                </div>
-              </div>
-            )}
-            {/* Tag Process Loader */}
-            {tagProcess.isProcessing && (
-              <div className="flex items-center gap-2 text-[10px] font-mono text-blue-400 animate-pulse">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                {tagProcess.currentMessage}
-              </div>
-            )}
-          </div>
-
-          {/* Content */}
-          <div className="flex-1">
-            <label className="block text-xs text-(--text-muted) font-mono mb-1 uppercase tracking-tighter">
-              {t("content")}
-            </label>
-
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="..."
-              rows={12}
-              className="w-full bg-black/5 dark:bg-black/50 border border-(--border-primary) rounded px-3 py-2 text-(--text-primary) font-mono text-sm focus:outline-none focus:border-green-600 transition-colors resize-none mb-12"
-            />
-          </div>
-
-          {/* Analysis Result Display */}
-          {analysisResult && !analyzeProcess.isProcessing && (
-            <div className="bg-black/20 border border-white/10 rounded-lg p-4 animate-in fade-in duration-300 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <BarChart2 size={16} className="text-purple-400" />
-                  <span className="text-sm font-mono text-(--text-primary)">
-                    {t("aiAnalysis")} ({viewLanguage.toUpperCase()})
-                  </span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-(--text-muted) font-mono">
-                      {t("score")}:
-                    </span>
-                    <span
-                      className={cn(
-                        "text-lg font-bold font-mono",
-                        analysisResult.score >= 90
-                          ? "text-green-400"
-                          : analysisResult.score >= 70
-                            ? "text-yellow-400"
-                            : "text-red-400",
-                      )}
-                    >
-                      {analysisResult.score}/100
-                    </span>
-                  </div>
-
-                  {analysisResult.score < 100 && (
-                    <button
-                      onClick={handleOptimize}
-                      disabled={isOptimizing}
-                      className="flex items-center gap-1.5 px-3 py-1 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 hover:border-purple-500/50 rounded text-xs text-purple-300 font-mono transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isOptimizing ? (
-                        <RefreshCw size={12} className="animate-spin" />
-                      ) : (
-                        <Zap size={12} />
-                      )}
-                      {isOptimizing ? t("fixing") : t("autoFix")}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="w-full h-1.5 bg-gray-700/50 rounded-full overflow-hidden">
-                <div
-                  className={cn(
-                    "h-full transition-all duration-500",
-                    analysisResult.score >= 90
-                      ? "bg-green-500"
-                      : analysisResult.score >= 70
-                        ? "bg-yellow-500"
-                        : "bg-red-500",
-                  )}
-                  style={{ width: `${analysisResult.score}%` }}
-                />
-              </div>
-
-              {/* Clarity & Suggestions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                <div className="bg-black/20 p-3 rounded border border-white/5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Info size={14} className="text-blue-400" />
-                    <span className="text-xs font-mono text-blue-400 uppercase">
-                      {t("clarity")}
-                    </span>
-                  </div>
-                  <p className="text-sm text-(--text-muted)">
-                    {analysisResult.clarity}
-                  </p>
-                </div>
-
-                <div className="bg-black/20 p-3 rounded border border-white/5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles size={14} className="text-yellow-400" />
-                    <span className="text-xs font-mono text-yellow-400 uppercase">
-                      {t("suggestions")}
-                    </span>
-                  </div>
-                  <ul className="text-sm text-(--text-muted) space-y-1 list-disc list-inside">
-                    {analysisResult.suggestions.map((s, i) => (
-                      <li key={i}>{s}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Info about auto-tagging */}
-          <div className="bg-(--bg-surface-hover) rounded p-3 text-xs text-(--text-muted) font-mono">
-            <span className="text-purple-400">ℹ</span>{" "}
-            {t("autoTagInfo") || "Tags are auto-suggested as you type."}
-          </div>
-        </div>
-
-        {/* Holographic Toolbar (Floating) */}
-        <PromptToolbar
-          onTranslate={handleTranslate}
-          onAnalyze={handleAnalyze}
-          onAutoSuggest={handleAutoSuggest}
-          translateProcess={translateProcess}
-          analyzeProcess={analyzeProcess}
-          suggestProcess={suggestProcess}
-          hasContent={!!content.trim()}
-          isTranslated={!!contentEs && !!contentEn && !isUnsynced}
-          hasMetadata={!!title.trim() && !!description.trim()}
-        />
-
-        {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-(--border-primary) bg-(--bg-surface)">
-          <div className="flex items-center gap-2">
-            <div className="text-xs text-(--text-muted) font-mono lowercase opacity-60">
-              {hasChanges && (
-                <span className="text-yellow-600 dark:text-yellow-500 animate-pulse">
-                  ● Unsaved Changes
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-mono text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-surface-hover) rounded transition-colors"
+              className="p-2 text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-surface-hover) rounded-md transition-colors"
+              title={t("close")}
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Main Workspace - Flexible Grid Logic */}
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+          {/* AREA 1: Editor Pane (Left/Top) */}
+          <div className="flex-1 flex flex-col relative bg-black/5 dark:bg-black/20 overflow-hidden">
+            {/* Editor Container */}
+            <div className="flex-1 flex flex-col p-4 sm:p-6 overflow-hidden relative z-0">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs text-(--text-muted) font-mono uppercase tracking-wider flex items-center gap-2 select-none">
+                  <span
+                    className={cn(
+                      "w-2 h-2 rounded-full",
+                      content.trim()
+                        ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"
+                        : "bg-gray-600",
+                    )}
+                  ></span>
+                  {t("content")}
+                </label>
+                <div className="text-[10px] text-(--text-muted) font-mono opacity-50 select-none">
+                  {content.length} chars
+                </div>
+              </div>
+
+              {/* Textarea Wrapper with Glass Effect */}
+              <div className="flex-1 relative rounded-xl border border-(--border-primary) bg-(--bg-surface)/50 backdrop-blur-sm overflow-hidden focus-within:ring-1 focus-within:ring-green-500/30 transition-all shadow-inner">
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="// Type your prompt content here..."
+                  className="w-full h-full p-4 sm:p-6 bg-transparent border-none focus:ring-0 resize-none font-mono text-sm leading-relaxed text-(--text-primary) outline-none custom-scrollbar"
+                  style={{ paddingBottom: "100px" }} // Space for toolbar
+                  spellCheck={false}
+                />
+
+                {/* Floating Toolbar within Editor */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 w-auto animate-in slide-in-from-bottom-4 duration-500">
+                  <PromptToolbar
+                    onTranslate={handleTranslate}
+                    onAnalyze={handleAnalyze}
+                    onAutoSuggest={handleAutoSuggest}
+                    translateProcess={translateProcess}
+                    analyzeProcess={analyzeProcess}
+                    suggestProcess={suggestProcess}
+                    hasContent={!!content.trim()}
+                    isTranslated={!!contentEs && !!contentEn && !isUnsynced}
+                    hasMetadata={!!title.trim() && !!description.trim()}
+                    className="static transform-none shadow-2xl"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* AREA 2: Sidebar Pane (Right/Bottom) */}
+          <div className="w-full lg:w-[340px] xl:w-[380px] shrink-0 bg-(--bg-surface) border-t lg:border-t-0 lg:border-l border-(--border-primary) flex flex-col h-[35vh] lg:h-auto overflow-hidden shadow-[-10px_0_30px_-5px_rgba(0,0,0,0.1)] z-10">
+            {/* Scrollable Sidebar Content */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-6 custom-scrollbar">
+              {/* 1. Metadata Group */}
+              <div className="space-y-4 animate-in slide-in-from-right-2 duration-300 delay-100">
+                <div className="flex items-center gap-2 pb-2 border-b border-(--border-primary)">
+                  <Info size={14} className="text-(--text-muted)" />
+                  <span className="text-xs font-bold text-(--text-muted) uppercase tracking-wider">
+                    Metadata ({viewLanguage.toUpperCase()})
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="group">
+                    <div className="flex justify-between mb-1.5">
+                      <label className="text-[10px] text-(--text-muted) font-mono uppercase group-focus-within:text-green-400 transition-colors">
+                        {t("promptTitle")}
+                      </label>
+                      {suggestProcess.isProcessing && !title.trim() && (
+                        <Sparkles
+                          size={12}
+                          className="text-yellow-400 animate-pulse"
+                        />
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Ex: Customer Support Bot..."
+                      className="w-full bg-black/5 dark:bg-black/20 border border-(--border-primary) rounded-md px-3 py-2 text-sm text-(--text-primary) font-medium focus:border-green-500/50 focus:bg-black/10 focus:outline-none transition-all placeholder:text-gray-600"
+                    />
+                  </div>
+
+                  <div className="group">
+                    <div className="flex justify-between mb-1.5">
+                      <label className="text-[10px] text-(--text-muted) font-mono uppercase group-focus-within:text-green-400 transition-colors">
+                        {t("description")}
+                      </label>
+                      {suggestProcess.isProcessing && !description.trim() && (
+                        <Sparkles
+                          size={12}
+                          className="text-yellow-400 animate-pulse"
+                        />
+                      )}
+                    </div>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Briefly describe what this prompt does..."
+                      rows={3}
+                      className="w-full bg-black/5 dark:bg-black/20 border border-(--border-primary) rounded-md px-3 py-2 text-xs text-(--text-primary) focus:border-green-500/50 focus:bg-black/10 focus:outline-none transition-all resize-none placeholder:text-gray-600"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Tags Group */}
+              <div className="space-y-3 animate-in slide-in-from-right-2 duration-300 delay-200">
+                <div className="flex items-center justify-between pb-2 border-b border-(--border-primary)">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-(--text-muted) uppercase tracking-wider">
+                      {t("tags")}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded-full bg-black/10 dark:bg-white/10 text-[10px] font-mono font-bold">
+                      {selectedTags.length}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowTaxonomyPicker(!showTaxonomyPicker)}
+                    className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded text-(--text-primary) transition-colors flex items-center gap-1 text-[10px] font-mono border border-transparent hover:border-(--border-primary)"
+                  >
+                    <Plus size={12} />
+                    {t("addTag")}
+                  </button>
+                </div>
+
+                <div className="min-h-[80px] p-3 rounded-lg border border-(--border-primary) bg-black/5 dark:bg-black/20 flex flex-wrap gap-2 content-start transition-all hover:border-(--border-primary)/80">
+                  {selectedTags.length > 0 ? (
+                    selectedTags.map((tag) => (
+                      <button
+                        key={tag.id}
+                        onClick={() => toggleTag(tag)}
+                        className="group"
+                      >
+                        <TagBadge
+                          name={locale === "es" ? tag.nameEs : tag.nameEn}
+                          className="text-[10px] px-2.5 py-1 cursor-pointer hover:bg-red-500/10 hover:border-red-500/30 transition-all shadow-sm"
+                        />
+                      </button>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center w-full h-full text-(--text-muted) opacity-60">
+                      <span className="text-[10px] italic">
+                        {t("noTagsAssigned")}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* AI Suggested Tags */}
+                {suggestedTags.length > 0 && !tagProcess.isProcessing && (
+                  <div className="animate-in slide-in-from-top-2 fade-in duration-500 mt-2">
+                    <div className="flex items-center justify-between mb-2 px-1">
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles
+                          size={12}
+                          className="text-blue-400 animate-pulse"
+                        />
+                        <span className="text-[10px] text-blue-400 font-mono uppercase tracking-wider font-bold">
+                          {t("aiSuggestions")}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          suggestedTags.forEach((t) => toggleTag(t));
+                          setSuggestedTags([]);
+                        }}
+                        className="text-[10px] text-blue-400 hover:text-blue-300 hover:underline cursor-pointer font-mono"
+                      >
+                        + {t("applyAll")}
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedTags.map((tag) => (
+                        <button
+                          key={tag.id}
+                          onClick={() => toggleTag(tag)}
+                          className="animate-in zoom-in duration-300"
+                        >
+                          <TagBadge
+                            name={locale === "es" ? tag.nameEs : tag.nameEn}
+                            className="text-[10px] px-2.5 py-1 bg-blue-500/5 border-blue-500/30 text-blue-300 hover:bg-blue-500/20 cursor-pointer transition-all shadow-[0_0_10px_rgba(59,130,246,0.1)]"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Auto-tagging process indicator */}
+                {tagProcess.isProcessing && (
+                  <div className="flex items-center gap-2 px-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+                    <span className="text-[10px] font-mono text-blue-400">
+                      {tagProcess.currentMessage}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Analysis Card */}
+              {analysisResult && !analyzeProcess.isProcessing && (
+                <div className="animate-in slide-in-from-right-4 duration-500 delay-300">
+                  <div className="flex items-center gap-2 pb-2 mb-2 border-b border-(--border-primary)">
+                    <BarChart2 size={14} className="text-purple-400" />
+                    <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">
+                      Analysis Report
+                    </span>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-purple-900/10 to-transparent rounded-xl border border-purple-500/20 p-4 space-y-4 relative overflow-hidden group hover:border-purple-500/40 transition-colors">
+                    {/* Dynamic Glow */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-[40px] rounded-full -mr-16 -mt-16 pointer-events-none group-hover:bg-purple-500/20 transition-all duration-700"></div>
+
+                    <div className="flex items-center justify-between relative z-10">
+                      <span className="text-xs text-(--text-muted) font-mono">
+                        Total Score
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={cn(
+                            "text-3xl font-bold font-mono tracking-tighter",
+                            analysisResult.score >= 90
+                              ? "text-green-400"
+                              : analysisResult.score >= 70
+                                ? "text-yellow-400"
+                                : "text-red-400",
+                          )}
+                        >
+                          {analysisResult.score}
+                        </span>
+                        {analysisResult.score < 100 && (
+                          <button
+                            onClick={handleOptimize}
+                            disabled={isOptimizing}
+                            className="p-1.5 bg-purple-500/10 hover:bg-purple-500/20 rounded-lg text-purple-300 transition-colors border border-purple-500/20 hover:border-purple-500/50"
+                            title={t("autoFix")}
+                          >
+                            {isOptimizing ? (
+                              <RefreshCw size={14} className="animate-spin" />
+                            ) : (
+                              <Zap size={14} />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full h-1.5 bg-black/20 rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full transition-all duration-1000 ease-out",
+                          analysisResult.score >= 90
+                            ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"
+                            : analysisResult.score >= 70
+                              ? "bg-yellow-500"
+                              : "bg-red-500",
+                        )}
+                        style={{ width: `${analysisResult.score}%` }}
+                      />
+                    </div>
+
+                    <div className="space-y-3 relative z-10">
+                      <div className="text-xs text-(--text-primary) leading-relaxed bg-black/10 p-2 rounded border border-white/5">
+                        <span className="text-blue-400 font-bold text-[10px] uppercase block mb-1">
+                          Clarity Assessment
+                        </span>
+                        {analysisResult.clarity}
+                      </div>
+                      <div>
+                        <span className="text-yellow-400 font-bold text-[10px] uppercase block mb-2">
+                          Improvement Suggestions
+                        </span>
+                        <ul className="space-y-2">
+                          {analysisResult.suggestions
+                            .slice(0, 3)
+                            .map((s, i) => (
+                              <li
+                                key={i}
+                                className="text-[11px] text-(--text-muted) flex gap-2"
+                              >
+                                <span className="text-yellow-500/50 mt-0.5">
+                                  •
+                                </span>
+                                <span>{s}</span>
+                              </li>
+                            ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer - Floating Clean Actions */}
+        <div className="shrink-0 p-4 border-t border-(--border-primary) bg-(--bg-surface) flex items-center justify-between z-20 relative">
+          <div className="flex items-center gap-3 text-xs text-(--text-muted)">
+            {hasChanges && (
+              <span className="text-yellow-500 flex items-center gap-1.5 px-2 py-1 rounded-md bg-yellow-500/5 border border-yellow-500/10 animate-pulse">
+                <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
+                Unsaved Changes
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-mono text-(--text-muted) hover:text-(--text-primary) hover:bg-(--bg-surface-hover) rounded-lg transition-colors"
             >
               {t("cancel")}
             </button>
@@ -1058,10 +1110,10 @@ export function PromptEditor({
               onClick={handleSave}
               disabled={!title.trim() || !content.trim()}
               className={cn(
-                "px-4 py-2 text-sm font-mono rounded flex items-center gap-2 transition-colors",
+                "px-6 py-2 text-xs font-bold font-mono rounded-lg flex items-center gap-2 transition-all shadow-lg",
                 title.trim() && content.trim()
-                  ? "bg-green-600 text-white hover:bg-green-500 shadow-lg shadow-green-900/20"
-                  : "bg-gray-700 text-gray-500 cursor-not-allowed",
+                  ? "bg-green-600 text-white hover:bg-green-500 hover:shadow-green-500/20 hover:-translate-y-0.5 active:translate-y-0"
+                  : "bg-gray-700 text-gray-500 cursor-not-allowed opacity-50",
               )}
             >
               {isNewPrompt ? <Plus size={16} /> : <Save size={16} />}
@@ -1069,6 +1121,34 @@ export function PromptEditor({
             </button>
           </div>
         </div>
+
+        {/* Floating Taxonomy Picker Overlay */}
+        {showTaxonomyPicker && taxonomy && (
+          <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex justify-end">
+            <div className="w-full sm:w-[380px] lg:w-[420px] h-full bg-(--bg-surface) border-l border-(--border-primary) shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col">
+              <div className="p-4 border-b border-(--border-primary) flex justify-between items-center bg-(--bg-surface)">
+                <span className="font-mono text-sm font-bold flex items-center gap-2">
+                  <Plus size={16} className="text-green-400" />
+                  Add Tags
+                </span>
+                <button
+                  onClick={() => setShowTaxonomyPicker(false)}
+                  className="p-1 hover:bg-white/10 rounded transition-colors text-(--text-muted) hover:text-white"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden relative">
+                <TaxonomyPicker
+                  taxonomy={taxonomy}
+                  selectedTags={selectedTags}
+                  onToggleTag={toggleTag}
+                  onClose={() => setShowTaxonomyPicker(false)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
