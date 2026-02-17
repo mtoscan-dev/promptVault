@@ -241,8 +241,17 @@ export async function analyzePromptEnhanced(
       temperature: 0.1,
     });
 
-    console.log("[ForgeAI] Enhanced Analysis complete:", object);
-    return { success: true, data: object };
+    // Override LLM's totalScore with actual sum — prevents hallucinated totals
+    const computedTotal =
+      object.categories.structure.score +
+      object.categories.context.score +
+      object.categories.quality.score +
+      object.categories.viability.score;
+
+    const correctedData = { ...object, totalScore: computedTotal };
+
+    console.log("[ForgeAI] Enhanced Analysis complete:", correctedData);
+    return { success: true, data: correctedData };
   } catch (error) {
     console.error("Enhanced Analysis Error:", error);
     return { success: false, error: "Failed to perform enhanced analysis." };

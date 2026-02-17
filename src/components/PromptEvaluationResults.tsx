@@ -13,6 +13,17 @@ import {
 import { cn } from "@/utils/cn";
 import { useLocale, useTranslations } from "next-intl";
 
+// --- Scoring Constants ---
+const SCORE_MAX = {
+  structure: 20,
+  context: 20,
+  quality: 20,
+  viability: 15,
+  total: 75,
+} as const;
+
+const LOW_SCORE_THRESHOLD = 60;
+
 interface EvaluationCategory {
   score: number;
   feedback: string;
@@ -49,31 +60,35 @@ export function PromptEvaluationResults({
 
   const categories = [
     {
-      id: "structure",
+      id: "structure" as const,
       icon: Layout,
       label: t("categories.structure"),
       color: "blue",
+      max: SCORE_MAX.structure,
       details: data.categories.structure,
     },
     {
-      id: "context",
+      id: "context" as const,
       icon: Target,
       label: t("categories.context"),
       color: "purple",
+      max: SCORE_MAX.context,
       details: data.categories.context,
     },
     {
-      id: "quality",
+      id: "quality" as const,
       icon: TrendingUp,
       label: t("categories.quality"),
       color: "yellow",
+      max: SCORE_MAX.quality,
       details: data.categories.quality,
     },
     {
-      id: "viability",
+      id: "viability" as const,
       icon: ShieldCheck,
       label: t("categories.viability"),
       color: "green",
+      max: SCORE_MAX.viability,
       details: data.categories.viability,
     },
   ];
@@ -85,7 +100,14 @@ export function PromptEvaluationResults({
     return "text-red-400";
   };
 
-  const isLowScore = data.totalScore < 60;
+  const isLowScore = data.totalScore < LOW_SCORE_THRESHOLD;
+
+  // SVG circular progress values
+  const circleRadius = 18;
+  const circleCircumference = 2 * Math.PI * circleRadius;
+  const scorePercent = Math.min(100, (data.totalScore / SCORE_MAX.total) * 100);
+  const strokeOffset =
+    circleCircumference - (scorePercent / 100) * circleCircumference;
 
   return (
     <div
@@ -108,29 +130,52 @@ export function PromptEvaluationResults({
               <span
                 className={cn(
                   "text-2xl font-bold font-mono",
-                  getScoreColor(data.totalScore, 75),
+                  getScoreColor(data.totalScore, SCORE_MAX.total),
                 )}
               >
                 {data.totalScore}
               </span>
               <span className="text-xs text-(--text-muted) opacity-50">
-                / 75
+                / {SCORE_MAX.total}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Progress Circle or Meter could go here */}
-        <div className="w-12 h-12 rounded-full border-2 border-white/5 flex items-center justify-center relative">
-          <div
-            className="absolute inset-0 rounded-full border-2 border-indigo-500/40"
-            style={{
-              clipPath: `polygon(0 0, 100% 0, 100% ${Math.min(100, (data.totalScore / 75) * 100)}%, 0 ${Math.min(100, (data.totalScore / 75) * 100)}%)`,
-              transform: "rotate(-90deg)",
-            }}
-          />
-          <span className="text-[10px] font-mono text-indigo-300 font-bold">
-            {Math.round((data.totalScore / 75) * 100)}%
+        {/* SVG Circular Progress */}
+        <div className="w-12 h-12 relative">
+          <svg
+            width="48"
+            height="48"
+            viewBox="0 0 48 48"
+            className="transform -rotate-90"
+          >
+            {/* Background circle */}
+            <circle
+              cx="24"
+              cy="24"
+              r={circleRadius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              className="text-white/5"
+            />
+            {/* Progress arc */}
+            <circle
+              cx="24"
+              cy="24"
+              r={circleRadius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeDasharray={circleCircumference}
+              strokeDashoffset={strokeOffset}
+              className="text-indigo-500/60 transition-all duration-1000 ease-out"
+            />
+          </svg>
+          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-indigo-300 font-bold">
+            {Math.round(scorePercent)}%
           </span>
         </div>
       </div>
@@ -160,13 +205,11 @@ export function PromptEvaluationResults({
               <span
                 className={cn(
                   "text-xs font-mono font-bold",
-                  getScoreColor(
-                    cat.details.score,
-                    cat.id === "viability" ? 15 : 20,
-                  ),
+                  getScoreColor(cat.details.score, cat.max),
                 )}
               >
                 {cat.details.score}
+                <span className="text-white/30 font-normal"> / {cat.max}</span>
               </span>
             </div>
 
@@ -181,7 +224,7 @@ export function PromptEvaluationResults({
                   cat.color === "green" && "bg-green-500",
                 )}
                 style={{
-                  width: `${(cat.details.score / (cat.id === "viability" ? 15 : 20)) * 100}%`,
+                  width: `${(cat.details.score / cat.max) * 100}%`,
                 }}
               />
             </div>
@@ -217,7 +260,7 @@ export function PromptEvaluationResults({
             </div>
           </div>
 
-          {/* Refinement Button - Always Visible but stylized */}
+          {/* Refinement Button */}
           {onOptimize && (
             <button
               onClick={onOptimize}
@@ -240,7 +283,7 @@ export function PromptEvaluationResults({
                   )}
                 />
               )}
-              {isOptimizing ? "Processing..." : t("aiRefinement")}
+              {isOptimizing ? t("processing") : t("aiRefinement")}
             </button>
           )}
         </div>

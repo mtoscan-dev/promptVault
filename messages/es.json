@@ -59,6 +59,7 @@
       "totalScore": "Puntuación Total",
       "refinementSuggestions": "Sugerencias de Refinamiento",
       "aiRefinement": "Refinamiento IA",
+      "processing": "Procesando...",
       "categories": {
         "structure": "Estructura",
         "context": "Contexto",

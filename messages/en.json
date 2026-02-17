@@ -58,6 +58,7 @@
       "totalScore": "Total Score",
       "refinementSuggestions": "Refinement Suggestions",
       "aiRefinement": "AI Refinement",
+      "processing": "Processing...",
       "categories": {
         "structure": "Structure",
         "context": "Context",
