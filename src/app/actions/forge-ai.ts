@@ -289,7 +289,8 @@ export async function optimizePrompt(
   }
 }
 
-import { TAXONOMY } from "@/utils/taxonomy";
+import { db } from "@/db";
+import { tags as tagsTable, tagDimensions } from "@/db/schema";
 import { SmartTag } from "@/types";
 
 export async function suggestSmartTags(content: string, locale: string = "en") {
@@ -299,28 +300,37 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
   try {
     const isSpanish = locale === "es";
 
-    // Flatten tags for context
-    const tagsContext = TAXONOMY.tags
+    // 1. Fetch Taxomony from Database
+    const allTags = await db.select().from(tagsTable);
+    const allDimensions = await db.select().from(tagDimensions);
+
+    // 2. Build Context for LLM
+    const tagsContext = allTags
       .map((t) => {
         const desc = isSpanish ? t.descriptionEs : t.descriptionEn;
         const name = isSpanish ? t.nameEs : t.nameEn;
-        return `- [${t.id}] ${name} (${t.dimensionId}): ${desc}`;
+        // Optimization: Include Dimension Name for better context
+        const paramDim = allDimensions.find((d) => d.id === t.dimensionId);
+        const dimName = isSpanish ? paramDim?.nameEs : paramDim?.nameEn;
+
+        return `- [${t.slug}] (${dimName}): ${name} - ${desc}`;
       })
       .join("\n");
 
     const systemPrompt = `
     ROLE: Expert Taxonomy Specialist and Content Classifier.
     
-    TASK: Analyze the provided prompt content and extract relevant tags from the provided list.
+    TASK: Analyze the provided prompt content and assign relevant tags from the database.
     
-    TAXONOMY LIST:
+    TAXONOMY DATABASE:
     ${tagsContext}
     
     RULES:
     1. Select ONLY tags that strictly apply to the content.
-    2. detailed analysis of the semantic intent.
-    3. Return a JSON array of tag IDs (e.g. ["seo", "dev"]).
+    2. Analyze the semantic intent of the prompt.
+    3. Return a JSON array of tag IDs (the values in brackets [] e.g. "seo").
     4. Max 5 tags.
+    5. OUTPUT FORMAT: JSON Object with "tagIds" array.
     `;
 
     const { object } = await generateObject({
@@ -328,24 +338,29 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
       schema: z.object({
         tagIds: z
           .array(z.string())
-          .describe("List of relevant tag IDs from the taxonomy."),
+          .describe("List of relevant tag IDs (slugs) from the taxonomy."),
       }),
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content },
       ],
-      temperature: 0.2, // Low temp for classification
+      temperature: 0.1, // Low temp for precision
     });
 
     console.log("[ForgeAI] Suggested Tag IDs:", object.tagIds);
 
-    // Hydrate tags
+    // 3. Hydrate tags from DB records
+    // We map the DB 'slug' to the 'id' field expected by the UI/SmartTag interface
     const hydratedTags = object.tagIds
-      .map((id) => TAXONOMY.tags.find((t) => t.id === id))
-      .filter((t): t is any => !!t) // Filter undefined
+      .map((slug) => allTags.find((t) => t.slug === slug))
+      .filter((t): t is (typeof allTags)[0] => !!t)
       .map((t) => ({
-        ...t,
-        // Ensure type compatibility if needed, though structure matches SmartTag
+        id: t.slug, // UI expects 'id' for selection
+        nameEn: t.nameEn,
+        nameEs: t.nameEs,
+        descriptionEn: t.descriptionEn || "",
+        descriptionEs: t.descriptionEs || "",
+        dimensionId: t.dimensionId,
       })) as SmartTag[];
 
     return { success: true, data: hydratedTags };
