@@ -24,6 +24,7 @@ import {
   optimizePrompt,
   suggestSmartTags,
   translatePromptFields,
+  checkAIGateway,
 } from "@/app/actions/forge-ai";
 import { detectLanguage } from "@/utils/languageDetection";
 import { useProcessSimulator } from "@/hooks/useProcessSimulator";
@@ -276,6 +277,16 @@ export function PromptEditor({
       setViewLanguage(locale === "es" ? "es" : "en");
     }
   }, [prompt, initialContent, exportLanguage, locale]);
+
+  // Health Check
+  useEffect(() => {
+    checkAIGateway().then((result) => {
+      console.log("[PromptEditor] AI Gateway Check:", result);
+      if (!result.success && result.hint) {
+        console.warn(`[PromptEditor] ⚠️ ${result.hint}`);
+      }
+    });
+  }, []);
 
   // Auto-Detect Language on Content Change
   useEffect(() => {

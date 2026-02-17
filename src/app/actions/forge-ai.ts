@@ -1,13 +1,16 @@
 "use server";
 
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, generateObject } from "ai";
+import { streamText, generateObject, generateText } from "ai";
 import { z } from "zod";
 
 // Create an OpenAI provider instance that points to our local Ollama
 // We use the OpenAI compatibility layer of Ollama
+const ollamaBaseUrl = process.env.OLLAMA_HOST + "/v1";
+console.log("[ForgeAI] Initializing Ollama provider at:", ollamaBaseUrl);
+
 const ollama = createOpenAI({
-  baseURL: process.env.OLLAMA_HOST + "/v1", // e.g. http://ollama:11434/v1
+  baseURL: ollamaBaseUrl, // e.g. http://host.docker.internal:11434/v1
   apiKey: "ollama", // Ollama doesn't require a key, but the SDK expects one
 });
 
@@ -349,5 +352,31 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
   } catch (error) {
     console.error("Tag Suggestion Error:", error);
     return { success: false, error: "Failed to suggest tags." };
+  }
+}
+
+export async function checkAIGateway() {
+  try {
+    const model = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    console.log(`[ForgeAI] Checking health with model: ${model}`);
+
+    // Simple fast check
+    const { text } = await generateText({
+      model: ollama(model),
+      prompt: "respond with 'ok'",
+    });
+
+    return { success: true, model, status: text };
+  } catch (error: any) {
+    console.error(`[ForgeAI] Health Check Failed: ${error.message}`);
+    const host = process.env.OLLAMA_HOST || "unknown";
+    return {
+      success: false,
+      error: error.message,
+      host,
+      hint: host.includes("localhost")
+        ? "Docker container cannot reach 'localhost'. Use 'host.docker.internal' and ensure Ollama binds to 0.0.0.0"
+        : "Check Ollama logs",
+    };
   }
 }
