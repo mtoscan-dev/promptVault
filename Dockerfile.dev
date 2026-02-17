@@ -11,7 +11,8 @@ RUN pnpm install
 
 # Copiamos el resto de los archivos de configuración
 COPY next.config.ts tsconfig.json ./
-# La carpeta /src se montará vía volúmenes en docker-compose.yml
+# La carpeta /src se montará vía volúmenes en docker-compose.yml, pero copiamos para asegurar
+COPY src ./src
 
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV development

@@ -246,15 +246,10 @@ export default function VaultPage() {
     [searchQuery, tErrors],
   );
 
-  const handleDelete = useCallback(
-    (id: string) => {
-      if (confirm(tEditor("confirmDelete"))) {
-        setPrompts((prev) => prev.filter((p) => p.id !== id));
-        // TODO: Call delete action
-      }
-    },
-    [tEditor],
-  );
+  const handleDelete = useCallback((id: string) => {
+    setPrompts((prev) => prev.filter((p) => p.id !== id));
+    // TODO: Call delete action
+  }, []);
 
   const switchVersion = useCallback((promptId: string, versionId: string) => {
     setPrompts((prev) =>
