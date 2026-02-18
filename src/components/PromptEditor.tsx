@@ -561,7 +561,35 @@ export function PromptEditor({
   const handleAnalyze = async () => {
     setAnalysisResult(null);
 
+    // Determine which content to analyze — always prefer English
+    let contentToAnalyze = content;
+
+    if (viewLanguage === "es") {
+      // Save current ES content to bucket before switching
+      setTitleEs(title);
+      setDescriptionEs(description);
+      setContentEs(content);
+
+      // Check if English content exists
+      const enContent = contentEn;
+      if (!enContent || !enContent.trim()) {
+        console.warn("[Analyze] No English content available");
+        return;
+      }
+
+      // Switch UI to English
+      setTitle(titleEn || "");
+      setDescription(descriptionEn || "");
+      setContent(enContent);
+      setViewLanguage("en");
+      contentToAnalyze = enContent;
+
+      console.log("[Analyze] Auto-switched to EN for analysis");
+    }
+
     const analyzeMessages = [
+      // Show switching message first if we auto-switched
+      ...(viewLanguage === "es" ? [t("switchingToEnglish")] : []),
       t("status.analyze.tokenizing"),
       t("status.analyze.checking"),
       t("status.analyze.evaluating"),
@@ -583,8 +611,9 @@ export function PromptEditor({
             );
           });
 
+          // Always analyze with the resolved English content
           const result = await Promise.race([
-            analyzePromptEnhanced(content, viewLanguage),
+            analyzePromptEnhanced(contentToAnalyze, "en"),
             timeoutPromise,
           ]);
 
@@ -601,24 +630,81 @@ export function PromptEditor({
   };
 
   const handleOptimize = async () => {
-    if (!analysisResult || !analysisResult.prioritySuggestions.length) return;
+    if (!analysisResult || !analysisResult.prioritySuggestions.length) {
+      console.warn("[Optimize] Skipped — no analysisResult or suggestions");
+      return;
+    }
+
+    const previousScore = analysisResult.totalScore;
+    console.log(`[Optimize] Starting — current score: ${previousScore}/75`);
 
     setIsOptimizing(true);
     try {
       const result = await optimizePromptEnhanced(
         content,
         analysisResult,
+        previousScore,
         viewLanguage,
       );
 
+      console.log("[Optimize] Result:", result);
+
       if (result.success && result.data?.optimizedContent) {
-        setContent(result.data.optimizedContent);
-        await handleAnalyze();
+        const optimizedContent = result.data.optimizedContent;
+        console.log(
+          `[Optimize] Got optimized content (${optimizedContent.length} chars)`,
+        );
+        setContent(optimizedContent);
+        setAnalysisResult(null);
+
+        // Re-analyze using the process wrapper for proper UI + monitor activation
+        const analyzeMessages = [
+          t("status.analyze.tokenizing"),
+          t("status.analyze.checking"),
+          t("status.analyze.evaluating"),
+          t("status.analyze.scoring"),
+        ];
+
+        await analyzeProcess.startProcess(
+          analyzeMessages,
+          async () => {
+            const timeoutPromise = new Promise<{
+              success: boolean;
+              data?: any;
+              error?: string;
+            }>((_, reject) => {
+              setTimeout(
+                () => reject(new Error("Analysis timed out after 120s")),
+                120000,
+              );
+            });
+
+            // Use optimizedContent directly — not the stale closure `content`
+            const reAnalysis = await Promise.race([
+              analyzePromptEnhanced(optimizedContent, viewLanguage),
+              timeoutPromise,
+            ]);
+
+            console.log("[Optimize] Re-analysis result:", reAnalysis);
+
+            if (reAnalysis.success && reAnalysis.data) {
+              setAnalysisResult(reAnalysis.data as AnalysisResult);
+            }
+            return reAnalysis;
+          },
+          { minDuration: 2000 },
+        );
+      } else {
+        console.warn(
+          "[Optimize] Optimization returned no content or failed:",
+          result,
+        );
       }
     } catch (error) {
-      console.error("Optimization failed", error);
+      console.error("[Optimize] Error:", error);
     } finally {
       setIsOptimizing(false);
+      console.log("[Optimize] Done");
     }
   };
 
@@ -825,9 +911,15 @@ export function PromptEditor({
                     translateProcess={translateProcess}
                     analyzeProcess={analyzeProcess}
                     suggestProcess={suggestProcess}
+                    isOptimizing={isOptimizing}
                     hasContent={!!content.trim()}
                     isTranslated={!!contentEs && !!contentEn && !isUnsynced}
                     hasMetadata={!!title.trim() && !!description.trim()}
+                    analyzeDisabledReason={
+                      viewLanguage === "es" && !contentEn?.trim()
+                        ? t("translateBeforeAnalyze")
+                        : undefined
+                    }
                     className="static transform-none shadow-2xl"
                   />
                 </div>

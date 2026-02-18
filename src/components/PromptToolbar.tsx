@@ -11,9 +11,11 @@ interface PromptToolbarProps {
   translateProcess: any;
   analyzeProcess: any;
   suggestProcess: any;
+  isOptimizing?: boolean;
   hasContent: boolean;
   isTranslated?: boolean;
   hasMetadata?: boolean;
+  analyzeDisabledReason?: string;
   className?: string;
 }
 
@@ -24,9 +26,11 @@ export function PromptToolbar({
   translateProcess,
   analyzeProcess,
   suggestProcess,
+  isOptimizing,
   hasContent,
   isTranslated,
   hasMetadata,
+  analyzeDisabledReason,
   className,
 }: PromptToolbarProps) {
   const t = useTranslations("Editor");
@@ -34,7 +38,8 @@ export function PromptToolbar({
   const isAnyProcessing =
     translateProcess.isProcessing ||
     analyzeProcess.isProcessing ||
-    suggestProcess.isProcessing;
+    suggestProcess.isProcessing ||
+    isOptimizing;
 
   const currentStatusMessage =
     (translateProcess.isProcessing && translateProcess.currentMessage) ||
@@ -82,10 +87,10 @@ export function PromptToolbar({
         {/* Analyze Button */}
         <ToolbarButton
           onClick={onAnalyze}
-          disabled={analyzeProcess.isProcessing}
+          disabled={analyzeProcess.isProcessing || !!analyzeDisabledReason}
           isActive={analyzeProcess.isProcessing}
           icon={BarChart2}
-          title={t("analyze")}
+          title={analyzeDisabledReason || t("analyze")}
           color="purple"
         />
 

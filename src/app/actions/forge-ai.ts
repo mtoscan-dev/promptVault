@@ -176,16 +176,37 @@ export async function analyzePromptEnhanced(
     ROLE: Expert Prompt Engineer and Quality Auditor.
     TASK: Systematically analyze the provided prompt using the "Prompt Evaluation Chain".
     
-    EVALUATION CRITERIA (Categorized):
-    A. Structure & Clarity: Clarity/Specificity, Instructions Structure, Formating, Brevity vs Detail.
-    B. Context & Purpose: Background Info, Task Definition, Persona/Role, Audience.
-    C. Instruction Quality: Output Style, Step-by-Step Reasoning, Consistency, Examples.
-    D. Viability: Iteration Potential, Model Adequacy, Constraints Feasibility.
-
-    SCORING:
-    - Each category (A, B, C) is out of 20 points.
-    - Category D is out of 15 points.
-    - Total Score: Max 75 points.
+    EVALUATION CRITERIA WITH SCORING RUBRICS:
+    
+    A. Structure & Clarity (0-20 points):
+       - Clarity/Specificity (0-5): Is the request unambiguous?
+       - Instructions Structure (0-5): Are steps logically ordered?
+       - Formatting (0-5): Is markup/formatting used effectively?
+       - Brevity vs Detail (0-5): Is the level of detail appropriate?
+    
+    B. Context & Purpose (0-20 points):
+       - Background Info (0-5): Is enough context provided?
+       - Task Definition (0-5): Is the goal clearly stated?
+       - Persona/Role (0-5): Is there a defined role or perspective?
+       - Audience (0-5): Is the target audience clear?
+    
+    C. Instruction Quality (0-20 points):
+       - Output Style (0-5): Is the desired output format specified?
+       - Step-by-Step Reasoning (0-5): Does it encourage chain-of-thought?
+       - Consistency (0-5): Are instructions internally consistent?
+       - Examples (0-5): Are examples or few-shot patterns provided?
+    
+    D. Viability (0-15 points):
+       - Iteration Potential (0-5): Can this prompt be easily refined?
+       - Model Adequacy (0-5): Is this suited for the target model?
+       - Constraints Feasibility (0-5): Are constraints realistic?
+    
+    SCORING RULES:
+    - Score EACH sub-criterion from 0-5, then sum for the category total.
+    - Be strict and consistent. A missing element scores 0-1 for that sub-criterion.
+    - A present but weak element scores 2-3.
+    - A well-implemented element scores 4-5.
+    - Apply the SAME standards every time regardless of prompt length.
 
     OUTPUT RULES:
     1. Feedback must be in ${langName}.
@@ -238,7 +259,7 @@ export async function analyzePromptEnhanced(
         { role: "system", content: systemPrompt },
         { role: "user", content },
       ],
-      temperature: 0.1,
+      temperature: 0,
     });
 
     // Override LLM's totalScore with actual sum — prevents hallucinated totals
@@ -260,53 +281,72 @@ export async function analyzePromptEnhanced(
 
 export async function optimizePromptEnhanced(
   content: string,
-  analysisReport: any,
+  analysisReport: unknown,
+  previousScore: number,
   language: string = "en",
 ) {
   const isSpanish = language === "es";
+  const langLabel = isSpanish ? "Spanish" : "English";
 
-  const systemPrompt = `
-    ROLE: Expert Prompt Engineer.
-    TASK: Systematically refine the original prompt based on its Evaluation Report.
-    
-    INPUT:
-    1. Original Prompt
-    2. Evaluation Report (JSON with scores and specific feedback)
-    
-    STRATEGY:
-    - High Priority: Fix categories with low scores first.
-    - Preserve: Keep strengths mentioned in the report.
-    - Consistency: Ensure persona, context, and formatting are professional.
-    
-    RULES:
-    1. Output ONLY the optimized prompt content.
-    2. **CRITICAL: MAINTAIN THE ORIGINAL LANGUAGE of the prompt.**
-    3. Do NOT add conversational filler.
-  `;
+  // Extract only the actionable suggestions — not the full JSON report
+  let improvements = "";
+  if (typeof analysisReport === "object" && analysisReport !== null) {
+    const report = analysisReport as Record<string, unknown>;
+    const suggestions = report.prioritySuggestions;
+    if (Array.isArray(suggestions)) {
+      improvements = suggestions
+        .map((s: unknown, i: number) => `${i + 1}. ${String(s)}`)
+        .join("\n");
+    }
+  }
+
+  const systemPrompt = `IMPORTANT: You MUST write your entire response in ${langLabel}. Every word must be in ${langLabel}.
+
+You are a prompt rewriter. Take the user's prompt and rewrite it to be better.
+
+Specific improvements to apply:
+${improvements || "Make the prompt more specific, add context, and add output format."}
+
+Rules:
+- Rewrite the ENTIRE prompt incorporating the improvements above.
+- Make it LONGER and MORE DETAILED than the original.
+- Add a role (e.g. "Act as a ...") if missing.
+- Add output format instructions if missing.
+- Do NOT copy the improvement instructions literally into the prompt.
+- Do NOT add meta-commentary, explanations, or quotes.
+- Reply ONLY with the rewritten prompt in ${langLabel}.`;
 
   try {
     const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
-    console.log(`[ForgeAI] Enhanced Optimization...`);
+    console.log(
+      `[ForgeAI] Enhanced Optimization with generateText (score: ${previousScore}/75)...`,
+    );
 
-    const { object } = await generateObject({
+    const { text } = await generateText({
       model: ollama(modelToUse),
-      schema: z.object({
-        optimizedContent: z.string().describe("The fully refined prompt."),
-      }),
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: JSON.stringify({
-            originalPrompt: content,
-            report: analysisReport,
-          }),
-        },
-      ],
-      temperature: 0.3,
+      system: systemPrompt,
+      prompt: content,
+      temperature: 0.5,
     });
 
-    return { success: true, data: object };
+    const optimizedContent = text.trim();
+
+    // Guard: empty output
+    if (!optimizedContent || optimizedContent.length < 10) {
+      console.warn("[ForgeAI] Optimizer returned empty/too-short output");
+      return { success: false, error: "Optimization produced invalid output." };
+    }
+
+    // Guard: identical content (model echoed input)
+    if (optimizedContent.toLowerCase() === content.trim().toLowerCase()) {
+      console.warn("[ForgeAI] Optimizer returned identical content — skipping");
+      return { success: false, error: "Optimization produced no changes." };
+    }
+
+    console.log(
+      `[ForgeAI] Optimization complete: ${content.length} → ${optimizedContent.length} chars`,
+    );
+    return { success: true, data: { optimizedContent } };
   } catch (error) {
     console.error("Enhanced Optimization Error:", error);
     return { success: false, error: "Failed to optimize prompt." };
@@ -428,18 +468,32 @@ export async function getSystemStatus() {
   const host = process.env.OLLAMA_HOST || "http://localhost:11434";
   const defaultModel = process.env.DEFAULT_MODEL || "qwen2.5:14b";
 
-  // --- CPU Usage (Node.js os module) ---
+  // --- CPU Usage (delta measurement for real-time load) ---
   const os = await import("os");
-  const cpus = os.cpus();
-  let totalIdle = 0;
-  let totalTick = 0;
-  for (const cpu of cpus) {
-    for (const type in cpu.times) {
-      totalTick += cpu.times[type as keyof typeof cpu.times];
+
+  const getCpuSnapshot = () => {
+    const cpus = os.cpus();
+    let idle = 0;
+    let total = 0;
+    for (const cpu of cpus) {
+      for (const type in cpu.times) {
+        total += cpu.times[type as keyof typeof cpu.times];
+      }
+      idle += cpu.times.idle;
     }
-    totalIdle += cpu.times.idle;
-  }
-  const cpuPercent = Math.round(((totalTick - totalIdle) / totalTick) * 100);
+    return { idle, total };
+  };
+
+  const snap1 = getCpuSnapshot();
+  await new Promise((r) => setTimeout(r, 500));
+  const snap2 = getCpuSnapshot();
+
+  const idleDelta = snap2.idle - snap1.idle;
+  const totalDelta = snap2.total - snap1.total;
+  const cpuPercent =
+    totalDelta > 0
+      ? Math.round(((totalDelta - idleDelta) / totalDelta) * 100)
+      : 0;
 
   // --- Ollama Status ---
   let ollamaOnline = false;

@@ -33,6 +33,8 @@
     "v": "v",
     "translate": "Translate",
     "analyze": "Analyze",
+    "switchingToEnglish": "Switching to EN for accurate analysis...",
+    "translateBeforeAnalyze": "Translate to English before analyzing",
     "analyzing": "ANALYZING...",
     "score": "SCORE",
     "autoSuggest": "Auto-Suggest",
