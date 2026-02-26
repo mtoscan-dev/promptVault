@@ -16,7 +16,7 @@ const ollama = createOpenAI({
 
 export async function streamForgeResponse(
   messages: any[],
-  model: string = process.env.DEFAULT_MODEL || "qwen2.5:14b",
+  model: string = process.env.DEFAULT_MODEL || "qwen2.5:3b",
 ) {
   try {
     // Basic validation
@@ -68,7 +68,7 @@ export async function translatePromptFields(
   `;
 
   try {
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:3b";
     console.log(`[ForgeAI] Generating object using model: ${modelToUse}`);
     const { object } = await generateObject({
       model: ollama(modelToUse),
@@ -131,7 +131,7 @@ export async function generatePromptMetadata(
 
   try {
     console.log(`[ForgeAI] Generating metadata (Target: ${language})...`);
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:3b";
     console.log(`[ForgeAI] Metadata generation using model: ${modelToUse}`);
     const isSpanish =
       language === "es" || (isAuto && content.match(/[áéíóúñ¿¡]/i));
@@ -214,7 +214,7 @@ export async function analyzePromptEnhanced(
   `;
 
   try {
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:3b";
     console.log(`[ForgeAI] Enhanced Analysis using model: ${modelToUse}`);
 
     const { object } = await generateObject({
@@ -288,8 +288,9 @@ export async function optimizePromptEnhanced(
   const isSpanish = language === "es";
   const langLabel = isSpanish ? "Spanish" : "English";
 
-  // Extract only the actionable suggestions — not the full JSON report
+  // Extract actionable suggestions and category scores for targeted improvements
   let improvements = "";
+  let scoreContext = "";
   if (typeof analysisReport === "object" && analysisReport !== null) {
     const report = analysisReport as Record<string, unknown>;
     const suggestions = report.prioritySuggestions;
@@ -298,38 +299,89 @@ export async function optimizePromptEnhanced(
         .map((s: unknown, i: number) => `${i + 1}. ${String(s)}`)
         .join("\n");
     }
+    // Extract category scores so the model knows what's weakest
+    const cats = report.categories as
+      | Record<string, { score?: number }>
+      | undefined;
+    if (cats) {
+      const scores = [
+        `Structure: ${cats.structure?.score ?? "?"}/20`,
+        `Context: ${cats.context?.score ?? "?"}/20`,
+        `Quality: ${cats.quality?.score ?? "?"}/20`,
+        `Viability: ${cats.viability?.score ?? "?"}/15`,
+      ];
+      scoreContext = `\nCurrent scores (focus on the lowest):\n${scores.join(" | ")}`;
+    }
   }
 
-  const systemPrompt = `IMPORTANT: You MUST write your entire response in ${langLabel}. Every word must be in ${langLabel}.
+  // For 3B models: keep the system prompt SHORT and concrete.
+  // Verbose rubrics get copied into the output as template sections.
+  const systemPrompt = `You MUST write in ${langLabel}. Output ONLY the rewritten prompt.
 
-You are a prompt rewriter. Take the user's prompt and rewrite it to be better.
+Rewrite the user's prompt to be higher quality. Include these elements:
+- Start with a role: "Act as a [specific expert]"
+- Add background context (1-2 sentences explaining why)
+- State the goal clearly in one sentence
+- Mention the target audience
+- Use numbered steps for instructions
+- Specify the output format (e.g. markdown, JSON, table)
+- Add one brief example of expected output
+- Use markdown formatting
+${scoreContext ? `\nWeakest areas to focus on:\n${scoreContext}` : ""}
+${improvements ? `\nSpecific fixes:\n${improvements}` : ""}
 
-Specific improvements to apply:
-${improvements || "Make the prompt more specific, add context, and add output format."}
-
-Rules:
-- Rewrite the ENTIRE prompt incorporating the improvements above.
-- Make it LONGER and MORE DETAILED than the original.
-- Add a role (e.g. "Act as a ...") if missing.
-- Add output format instructions if missing.
-- Do NOT copy the improvement instructions literally into the prompt.
-- Do NOT add meta-commentary, explanations, or quotes.
-- Reply ONLY with the rewritten prompt in ${langLabel}.`;
+STRICT RULES:
+- Keep the rewritten prompt under 600 words. Be concise.
+- Do NOT include section headers like "Instruction Quality" or "Viability".
+- Do NOT add commentary before or after the prompt.
+- Start your response directly with "Act as" or "# ".`;
 
   try {
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:3b";
     console.log(
       `[ForgeAI] Enhanced Optimization with generateText (score: ${previousScore}/75)...`,
     );
 
+    // Truncate very long input to prevent timeouts and score=0 on re-analysis
+    const maxInputChars = 2000;
+    const inputContent =
+      content.length > maxInputChars
+        ? content.substring(0, maxInputChars) +
+          "\n\n[...truncated for optimization]"
+        : content;
+
     const { text } = await generateText({
       model: ollama(modelToUse),
       system: systemPrompt,
-      prompt: content,
-      temperature: 0.5,
+      prompt: inputContent,
+      temperature: 0.6,
+      maxOutputTokens: 400,
     });
 
-    const optimizedContent = text.trim();
+    // Post-process: strip meta-commentary that small models add
+    let optimizedContent = text.trim();
+
+    // Strip preamble lines (e.g. "Here is the revised prompt:", "As a prompt engineer...")
+    optimizedContent = optimizedContent
+      .replace(
+        /^(?:(?:here is|below is|i will|let me|this is|as a prompt)[^\n]*\n+(?:---\n)?)/i,
+        "",
+      )
+      .replace(/^---\n+/, "");
+
+    // Strip epilogue (e.g. "This revised version provides...")
+    optimizedContent = optimizedContent.replace(
+      /\n+(?:---\n+)?(?:this (?:revised|enhanced|improved|updated|new|rewritten) (?:version|prompt)[^\n]*\.?\s*)$/i,
+      "",
+    );
+
+    // Strip leaked rubric category headers
+    optimizedContent = optimizedContent.replace(
+      /\n+(?:Instruction Quality|Viability|Structure & Clarity|Context & Purpose):?\n/gi,
+      "\n",
+    );
+
+    optimizedContent = optimizedContent.trim();
 
     // Guard: empty output
     if (!optimizedContent || optimizedContent.length < 10) {
@@ -358,7 +410,7 @@ import { tags as tagsTable, tagDimensions } from "@/db/schema";
 import { SmartTag } from "@/types";
 
 export async function suggestSmartTags(content: string, locale: string = "en") {
-  const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+  const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:3b";
   console.log(`[ForgeAI] Suggesting smart tags using model: ${modelToUse}...`);
 
   try {
@@ -436,7 +488,7 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
 
 export async function checkAIGateway() {
   try {
-    const model = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    const model = process.env.DEFAULT_MODEL || "qwen2.5:3b";
     console.log(`[ForgeAI] Checking health with model: ${model}`);
 
     // Simple fast check
@@ -466,7 +518,7 @@ export async function checkAIGateway() {
  */
 export async function getSystemStatus() {
   const host = process.env.OLLAMA_HOST || "http://localhost:11434";
-  const defaultModel = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+  const defaultModel = process.env.DEFAULT_MODEL || "qwen2.5:3b";
 
   // --- CPU Usage (delta measurement for real-time load) ---
   const os = await import("os");
@@ -586,7 +638,7 @@ export async function predictDimension(
   dimensions: { id: string; nameEn: string; nameEs: string }[],
 ): Promise<{ success: boolean; dimensionId?: string }> {
   try {
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:3b";
 
     const context = dimensions
       .map((d) => `- ID: ${d.id}, Name: ${d.nameEn} / ${d.nameEs}`)
