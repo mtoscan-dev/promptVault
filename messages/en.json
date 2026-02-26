@@ -62,6 +62,7 @@
       "totalScore": "Total Score",
       "refinementSuggestions": "Refinement Suggestions",
       "aiRefinement": "AI Refinement",
+      "scoreGood": "Score is solid. Manual tweaks recommended from here.",
       "processing": "Processing...",
       "categories": {
         "structure": "Structure",
@@ -79,9 +80,9 @@
       },
       "analyze": {
         "tokenizing": "Tokenizing...",
-        "checking": "Checking grammar...",
-        "evaluating": "Evaluating clarity...",
-        "scoring": "Scoring..."
+        "checking": "Reasoning about structure...",
+        "evaluating": "Evaluating quality...",
+        "scoring": "Computing scores..."
       },
       "autoSuggest": {
         "reading": "Reading content...",

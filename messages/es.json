@@ -63,6 +63,7 @@
       "totalScore": "Puntuación Total",
       "refinementSuggestions": "Sugerencias de Refinamiento",
       "aiRefinement": "Refinamiento IA",
+      "scoreGood": "El puntaje es sólido. Se recomiendan ajustes manuales.",
       "processing": "Procesando...",
       "categories": {
         "structure": "Estructura",
@@ -80,9 +81,9 @@
       },
       "analyze": {
         "tokenizing": "Tokenizando...",
-        "checking": "Revisando gramática...",
-        "evaluating": "Evaluando claridad...",
-        "scoring": "Calculando puntaje..."
+        "checking": "Razonando estructura...",
+        "evaluating": "Evaluando calidad...",
+        "scoring": "Calculando puntajes..."
       },
       "autoSuggest": {
         "reading": "Leyendo contenido...",

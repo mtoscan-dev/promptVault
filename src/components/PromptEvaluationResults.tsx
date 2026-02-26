@@ -260,31 +260,33 @@ export function PromptEvaluationResults({
             </div>
           </div>
 
-          {/* Refinement Button */}
-          {onOptimize && (
+          {/* Refinement Button — gated by score */}
+          {onOptimize && isLowScore && (
             <button
               onClick={onOptimize}
               disabled={isOptimizing}
-              className={cn(
-                "w-full flex items-center justify-center gap-2 py-3 rounded-xl transition-all border font-mono text-[10px] uppercase tracking-widest group",
-                isLowScore
-                  ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/40"
-                  : "bg-green-500/5 border-green-500/10 text-green-400/70 hover:bg-green-500/10 hover:border-green-500/30",
-              )}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl transition-all border font-mono text-[10px] uppercase tracking-widest group bg-indigo-500/10 border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/40"
             >
               {isOptimizing ? (
                 <TrendingUp size={14} className="animate-pulse" />
               ) : (
                 <CheckCircle2
                   size={14}
-                  className={cn(
-                    "group-hover:scale-110 transition-transform",
-                    isLowScore ? "text-indigo-400" : "text-green-500",
-                  )}
+                  className="group-hover:scale-110 transition-transform text-indigo-400"
                 />
               )}
               {isOptimizing ? t("processing") : t("aiRefinement")}
             </button>
+          )}
+
+          {/* Score is good — show success message instead of optimize button */}
+          {!isLowScore && (
+            <div className="flex items-center gap-2 p-3 bg-green-500/5 border border-green-500/10 rounded-xl">
+              <CheckCircle2 size={14} className="text-green-500 shrink-0" />
+              <span className="text-[10px] font-mono text-green-400/80">
+                {t("scoreGood")}
+              </span>
+            </div>
           )}
         </div>
       )}

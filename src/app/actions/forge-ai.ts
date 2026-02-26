@@ -172,82 +172,80 @@ export async function analyzePromptEnhanced(
   const isSpanish = language === "es";
   const langName = isSpanish ? "Spanish" : "English";
 
-  const systemPrompt = `
-    ROLE: Expert Prompt Engineer and Quality Auditor.
-    TASK: Systematically analyze the provided prompt using the "Prompt Evaluation Chain".
-    
-    EVALUATION CRITERIA WITH SCORING RUBRICS:
-    
-    A. Structure & Clarity (0-20 points):
-       - Clarity/Specificity (0-5): Is the request unambiguous?
-       - Instructions Structure (0-5): Are steps logically ordered?
-       - Formatting (0-5): Is markup/formatting used effectively?
-       - Brevity vs Detail (0-5): Is the level of detail appropriate?
-    
-    B. Context & Purpose (0-20 points):
-       - Background Info (0-5): Is enough context provided?
-       - Task Definition (0-5): Is the goal clearly stated?
-       - Persona/Role (0-5): Is there a defined role or perspective?
-       - Audience (0-5): Is the target audience clear?
-    
-    C. Instruction Quality (0-20 points):
-       - Output Style (0-5): Is the desired output format specified?
-       - Step-by-Step Reasoning (0-5): Does it encourage chain-of-thought?
-       - Consistency (0-5): Are instructions internally consistent?
-       - Examples (0-5): Are examples or few-shot patterns provided?
-    
-    D. Viability (0-15 points):
-       - Iteration Potential (0-5): Can this prompt be easily refined?
-       - Model Adequacy (0-5): Is this suited for the target model?
-       - Constraints Feasibility (0-5): Are constraints realistic?
-    
-    SCORING RULES:
-    - Score EACH sub-criterion from 0-5, then sum for the category total.
-    - Be strict and consistent. A missing element scores 0-1 for that sub-criterion.
-    - A present but weak element scores 2-3.
-    - A well-implemented element scores 4-5.
-    - Apply the SAME standards every time regardless of prompt length.
-
-    OUTPUT RULES:
-    1. Feedback must be in ${langName}.
-    2. Be critical and use professional engineering terminology.
-  `;
-
   try {
-    const modelToUse = process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || "qwen2.5:7b";
-    console.log(`[ForgeAI] Enhanced Analysis using model: ${modelToUse}`);
+    const modelToUse = process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || "qwen2.5:3b";
+    console.log(`[ForgeAI] Enhanced Analysis (2-pass) using model: ${modelToUse}`);
 
-    const { object } = await generateObject({
+    // --- Pass 1: Free-form reasoning (model thinks better in plain text) ---
+    const reasoningPrompt = `You are a prompt engineering expert. Analyze the following prompt thoroughly.
+
+Evaluate these 4 categories. For each, list what's present and what's missing:
+
+A. Structure & Clarity: Is the request clear and unambiguous? Are instructions logically ordered? Is formatting used? Is detail level appropriate?
+B. Context & Purpose: Is background info provided? Is the goal stated? Is there a role/persona? Is the audience defined?
+C. Instruction Quality: Is output format specified? Does it encourage step-by-step reasoning? Are instructions consistent? Are examples provided?
+D. Viability: Can it be easily refined? Is it suited for the target model? Are constraints realistic?
+
+For each category, note specific strengths and weaknesses. Then list the top 3 most impactful improvements.
+Write your analysis in ${langName}.`;
+
+    const { text: reasoning } = await generateText({
+      model: ollama(modelToUse),
+      system: reasoningPrompt,
+      prompt: content,
+      temperature: 0,
+      maxOutputTokens: 500,
+    });
+
+    console.log("[ForgeAI] Pass 1 (reasoning) complete:", reasoning.length, "chars");
+
+    // --- Pass 2: Structured scoring with simplified 1-5 scale ---
+    // Small models score more accurately on a 1-5 range than 0-20.
+    // We scale up to the UI's expected ranges in post-processing.
+    const scoringPrompt = `Based on the analysis below, rate each category on a scale of 1 to 5.
+
+Rating guide:
+1 = Very poor (most elements missing)
+2 = Weak (some elements present but vague)
+3 = Adequate (core elements present, room for improvement)
+4 = Good (well-structured with minor gaps)
+5 = Excellent (comprehensive and well-crafted)
+
+Be fair. Reward what IS present. A prompt with clear goal, structure, and format deserves 3-4 even if not perfect.
+
+ANALYSIS:
+${reasoning}`;
+
+    const { object: rawScores } = await generateObject({
       model: ollama(modelToUse),
       schema: z.object({
-        totalScore: z.number().int().min(0).max(75),
         categories: z.object({
           structure: z.object({
-            score: z.number().min(0).max(20),
+            rating: z.number().int().min(1).max(5),
             feedback: z
               .string()
-              .describe(`Brief analysis of category A in ${langName}.`),
+              .describe(`1-2 sentence summary in ${langName}.`),
             strengths: z
               .array(z.string())
-              .describe("Specific strengths in category A."),
+              .describe("Specific strengths found."),
           }),
           context: z.object({
-            score: z.number().min(0).max(20),
+            rating: z.number().int().min(1).max(5),
             feedback: z
               .string()
-              .describe(`Brief analysis of category B in ${langName}.`),
+              .describe(`1-2 sentence summary in ${langName}.`),
           }),
           quality: z.object({
-            score: z.number().min(0).max(20),
+            rating: z.number().int().min(1).max(5),
             feedback: z
               .string()
-              .describe(`Brief analysis of category C in ${langName}.`),
+              .describe(`1-2 sentence summary in ${langName}.`),
           }),
           viability: z.object({
-            score: z.number().min(0).max(15),
+            rating: z.number().int().min(1).max(5),
             feedback: z
               .string()
-              .describe(`Brief analysis of category D in ${langName}.`),
+              .describe(`1-2 sentence summary in ${langName}.`),
           }),
         }),
         prioritySuggestions: z
@@ -256,13 +254,46 @@ export async function analyzePromptEnhanced(
           .describe(`Top 3 actionable improvements in ${langName}.`),
       }),
       messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content },
+        { role: "system", content: scoringPrompt },
+        { role: "user", content: `Rate the prompt: "${content.substring(0, 500)}"` },
       ],
       temperature: 0,
     });
 
-    // Override LLM's totalScore with actual sum — prevents hallucinated totals
+    console.log("[ForgeAI] Pass 2 (scoring) complete — raw ratings:", {
+      structure: rawScores.categories.structure.rating,
+      context: rawScores.categories.context.rating,
+      quality: rawScores.categories.quality.rating,
+      viability: rawScores.categories.viability.rating,
+    });
+
+    // Scale 1-5 ratings to UI ranges: structure/context/quality → 0-20, viability → 0-15
+    const scaleScore = (rating: number, max: number) =>
+      Math.round((rating / 5) * max);
+
+    const object = {
+      categories: {
+        structure: {
+          score: scaleScore(rawScores.categories.structure.rating, 20),
+          feedback: rawScores.categories.structure.feedback,
+          strengths: rawScores.categories.structure.strengths,
+        },
+        context: {
+          score: scaleScore(rawScores.categories.context.rating, 20),
+          feedback: rawScores.categories.context.feedback,
+        },
+        quality: {
+          score: scaleScore(rawScores.categories.quality.rating, 20),
+          feedback: rawScores.categories.quality.feedback,
+        },
+        viability: {
+          score: scaleScore(rawScores.categories.viability.rating, 15),
+          feedback: rawScores.categories.viability.feedback,
+        },
+      },
+      prioritySuggestions: rawScores.prioritySuggestions,
+    };
+
     const computedTotal =
       object.categories.structure.score +
       object.categories.context.score +
@@ -332,7 +363,7 @@ Rules:
 - Keep it concise but thorough`;
 
   try {
-    const modelToUse = process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || "qwen2.5:7b";
+    const modelToUse = process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || "qwen2.5:3b";
     console.log(
       `[ForgeAI] Enhanced Optimization with generateText (score: ${previousScore}/75)...`,
     );
@@ -350,11 +381,14 @@ Rules:
       system: systemPrompt,
       prompt: inputContent,
       temperature: 0.5,
-      maxOutputTokens: 800,
+      maxOutputTokens: 600,
     });
 
     // Post-process: strip meta-commentary that small models add
     let optimizedContent = text.trim();
+
+    // Strip thinking tags from models like Qwen3 that use <think>...</think>
+    optimizedContent = optimizedContent.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
 
     // Strip preamble lines (e.g. "Here is the revised prompt:", "As a prompt engineer...")
     optimizedContent = optimizedContent
