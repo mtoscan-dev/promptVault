@@ -85,6 +85,7 @@ export function PromptEditor({
     null,
   );
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   // Tagging State
   const [selectedTags, setSelectedTags] = useState<SmartTag[]>([]);
@@ -560,6 +561,7 @@ export function PromptEditor({
 
   const handleAnalyze = async () => {
     setAnalysisResult(null);
+    setAnalysisError(null);
 
     // Determine which content to analyze — always prefer English
     let contentToAnalyze = content;
@@ -619,6 +621,8 @@ export function PromptEditor({
 
           if (result.success && result.data) {
             setAnalysisResult(result.data as AnalysisResult);
+          } else if (!result.success) {
+            setAnalysisError(t("analysisError"));
           }
           return result;
         },
@@ -626,6 +630,7 @@ export function PromptEditor({
       );
     } catch (error) {
       console.error("Analysis Failed", error);
+      setAnalysisError(t("analysisError"));
     }
   };
 
@@ -639,6 +644,7 @@ export function PromptEditor({
     console.log(`[Optimize] Starting — current score: ${previousScore}/75`);
 
     setIsOptimizing(true);
+    setAnalysisError(null);
     try {
       const result = await optimizePromptEnhanced(
         content,
@@ -680,8 +686,9 @@ export function PromptEditor({
             });
 
             // Use optimizedContent directly — not the stale closure `content`
+            // Always analyze in English for consistent scoring
             const reAnalysis = await Promise.race([
-              analyzePromptEnhanced(optimizedContent, viewLanguage),
+              analyzePromptEnhanced(optimizedContent, "en"),
               timeoutPromise,
             ]);
 
@@ -699,9 +706,11 @@ export function PromptEditor({
           "[Optimize] Optimization returned no content or failed:",
           result,
         );
+        setAnalysisError(t("optimizeError"));
       }
     } catch (error) {
       console.error("[Optimize] Error:", error);
+      setAnalysisError(t("optimizeError"));
     } finally {
       setIsOptimizing(false);
       console.log("[Optimize] Done");
@@ -1078,6 +1087,14 @@ export function PromptEditor({
                   </div>
                 )}
               </div>
+
+              {/* Analysis Error */}
+              {analysisError && !analyzeProcess.isProcessing && (
+                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg animate-in fade-in duration-300">
+                  <RefreshCw size={14} className="text-red-400 shrink-0" />
+                  <span className="text-[11px] font-mono text-red-300">{analysisError}</span>
+                </div>
+              )}
 
               {/* 3. Analysis Card */}
               {analysisResult && !analyzeProcess.isProcessing && (

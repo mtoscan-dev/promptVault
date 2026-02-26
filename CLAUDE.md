@@ -4,108 +4,132 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**PromptVault** is a Next.js 16 (React 19) web application that serves as a personal repository for managing and versioning prompts with a terminal-inspired user interface. Key features include version control for every prompt save, automatic AI-powered tag classification, local storage persistence, and a terminal-style search interface.
+**PromptVault** is a Next.js 16 (React 19) web application for managing and versioning AI prompts with a terminal-inspired UI. Features: version control, AI-powered smart tagging (via Ollama), bilingual support (es/en), prompt analysis/evaluation, pgvector semantic search, and Docker-based local AI infrastructure.
 
 ## Tech Stack
 
 - **Framework**: Next.js 16 (React 19)
 - **Language**: TypeScript (strict mode)
-- **Styling**: Tailwind CSS 4 + PostCSS
+- **Database**: PostgreSQL + pgvector (via Drizzle ORM)
+- **AI**: Ollama (local LLM) + AI SDK (`@ai-sdk/openai`)
+- **i18n**: next-intl (es/en locales)
+- **Styling**: Tailwind CSS 4 + PostCSS + Framer Motion
 - **UI Components**: Lucide React Icons
-- **Utilities**: date-fns, uuid, clsx, tailwind-merge
+- **Utilities**: date-fns, uuid, clsx, tailwind-merge, zod
 - **Package Manager**: pnpm
-- **Deployment**: Docker + Nginx (standalone output)
+- **Deployment**: Docker Compose (app + PostgreSQL + Nginx + Drizzle Studio)
 
 ## Architecture
 
-The application uses a **centralized state management pattern** combined with **Server Actions** and **Drizzle ORM** for persistence. The UI is orchestrated from `src/components/forge/ForgeWorkspace.tsx` and its descendants, which are rendered within the localized route `src/app/[locale]/page.tsx`.
+Two React contexts: `ForgeContext` (persona/skill/rule selection + LLM inference) and `SettingsContext` (app preferences). Server Actions + Drizzle ORM for persistence. UI orchestrated from `src/components/forge/ForgeWorkspace.tsx`, rendered within `src/app/[locale]/page.tsx`.
 
-### Core Data Model
+### Directory Structure
 
 ```
-Prompt
-├── id: string (UUID)
-├── title, description: string
-├── tags: string[] (auto-generated via classifyPrompt)
-├── versions: PromptVersion[]
-│   ├── id: string (UUID)
-│   ├── content: string
-│   ├── createdAt: Date
-│   └── versionNumber: number
-├── currentVersionId: string (pointer to active version)
-├── createdAt, updatedAt: Date
+src/
+├── app/
+│   ├── [locale]/page.tsx      # Entry point (server-side data fetch)
+│   ├── actions/               # Server actions (forge-ai.ts, taxonomy.ts)
+│   └── api/chat/              # Chat API route
+├── components/
+│   ├── forge/                 # Core workspace (ForgeWorkspace, AssemblyArea, IngredientsPanel, OutputStream, CompilerLab, LiveBlueprint)
+│   ├── terminal/              # Terminal UI (BunkerHUD, BunkerHeader, QuickTerminal, SystemStats)
+│   ├── governance/            # Rule management (GovExplorer)
+│   ├── ui/                    # Reusable cards (PersonaCard, ResultLogCard, SkillCard)
+│   ├── PromptEditor.tsx       # Create/edit modal with translation + AI analysis
+│   ├── TerminalSearch.tsx     # Tag autocomplete (space=select, backspace=remove, enter=confirm)
+│   ├── TaxonomyManager.tsx    # Smart tagging taxonomy CRUD
+│   ├── SystemMonitor.tsx      # CPU, Ollama connectivity, model memory
+│   ├── SettingsModal.tsx      # App settings (language, theme, developer mode)
+│   └── ...                    # TagCloud, TagBadge, PromptCard, ThemeToggle, LocaleSwitcher, etc.
+├── contexts/                  # ForgeContext (persona/skill/rule + inference), SettingsContext (preferences)
+├── db/
+│   ├── schema.ts              # Drizzle schema (prompts, tags, tagDimensions, personas, governance, settings, promptTags)
+│   ├── queries/forge.ts       # Database query functions
+│   └── seed.ts, seed-tags.ts  # Seed scripts
+├── hooks/                     # use-ollama-stream, useProcessSimulator
+├── i18n/                      # next-intl config (routing.ts, request.ts)
+├── lib/
+│   ├── actions/               # vault.ts, settings.ts, log-activity.ts
+│   ├── compiler.ts            # Prompt compilation logic
+│   └── vectorize.ts           # pgvector embedding generation
+├── types/
+│   ├── index.ts               # Prompt, PromptVersion, Tag, SmartTag, TagDimension, Taxonomy, AnalysisResult
+│   └── forge.ts               # ForgePersona, ForgeSkill, ForgeRule, ForgeInferenceMetrics
+└── utils/                     # classification.ts, styling.ts, cn.ts, languageDetection.ts
 ```
 
-### Component Structure
+### Database Schema (PostgreSQL + pgvector)
 
-- **`src/app/[locale]/page.tsx`**: Entry point for the Forge workspace. Fetches initial data via server-side queries.
-- **`ForgeWorkspace.tsx`**: Main orchestration component for the Forge environment.
-- **`IngredientsPanel.tsx`**, **`AssemblyArea.tsx`**, **`OutputStream.tsx`**: Core modular components of the Forge interface.
-- **`TerminalSearch.tsx`**: Terminal-style search input with tag autocomplete. Uses space to select tags, backspace to remove, and enter to confirm.
-- **`PromptCard.tsx`**: Individual prompt display showing title, description, tags, and version count. Includes delete and edit triggers.
-- **`PromptEditor.tsx`**: Modal for creating/editing prompts with title, description, content fields and version history dropdown. Supports multi-language translation and AI analysis.
-- **`TerminalSearch.tsx`**: Terminal-style search input with tag autocomplete. Uses space to select tags, backspace to remove, and enter to confirm.
-- **`PromptCard.tsx`**: Individual prompt display showing title, description, tags, and version count. Includes delete and edit triggers.
-- **`PromptEditor.tsx`**: Modal for creating/editing prompts with title, description, content fields and version history dropdown.
-- **`TagCloud.tsx`**: Interactive tag display showing all tags with counts and colors. Clicking toggles tag filter.
-- **`TagBadge.tsx`**: Small reusable component for displaying individual tags.
+Key tables: `prompts` (bilingual titles/descriptions, content, versions JSONB, 768-dim embedding vector), `tags` + `tag_dimensions` (multi-dimensional taxonomy), `prompt_tags` (M2M), `personas`, `governance`, `settings` (singleton id=1).
 
-### Utility Functions
-
-- **`classification.ts`**: `classifyPrompt()` - keyword-based auto-tagging for 10 categories (coding, writing, analysis, creative, translation, summary, debugging, education, api, frontend). Returns `['general']` if no matches.
-- **`styling.ts`**: `TAG_COLORS` object mapping tag names to Tailwind color classes with a default fallback.
-- **`cn.ts`**: Utility for merging class names (clsx + tailwind-merge integration).
+All text fields are bilingual (`*_es`, `*_en`). The `tags` array on prompts is a read cache; canonical tag relationships live in `prompt_tags`.
 
 ### Data Flow
 
-1. **Initialization**: `initialPrompts` from `src/data/mock.ts` loaded into state
-2. **Tag Derivation**: Tags computed from all prompts via useEffect, sorted by count
-3. **Filtering**: Prompts filtered by selected tags (all match required) and search query (title/description/content)
-4. **Save Operation**: Creates new `PromptVersion` with UUID and incremented version number, auto-tags via `classifyPrompt()`, updates `currentVersionId`
-5. **Version Switching**: Updates `currentVersionId` pointer without modifying version history
-
-All data is persisted in a **PostgreSQL database** via **Drizzle ORM**. Server actions in `src/app/actions/` handle data mutations and AI-powered operations (translations, suggestions, analysis).
+1. **Initialization**: Server-side fetch via Drizzle queries in page.tsx
+2. **State**: ForgeContext manages persona/skill/rule selection and LLM inference; SettingsContext handles app preferences
+3. **Filtering**: AND logic for tags + case-insensitive text search on title/description/content
+4. **Save**: Creates new version entry in JSONB array, auto-tags via AI (Ollama) or keyword fallback
+5. **Smart Tagging**: Ollama classifies prompts against the taxonomy (tag_dimensions + tags)
+6. **Analysis**: AI-powered prompt evaluation with scoring rubric (structure, context, quality, viability)
 
 ## Commands
 
 ```bash
-# Install dependencies
-pnpm install
+pnpm install                  # Install dependencies
+pnpm run dev                  # Dev server (http://localhost:3000)
+pnpm build                    # Production build
+pnpm start                    # Production server
+pnpm run lint                 # TypeScript + ESLint
 
-# Start development server (http://localhost:3000)
-pnpm run dev
+# Database (Drizzle)
+pnpm run db:generate          # Generate migrations from schema
+pnpm run db:migrate           # Run migrations
+pnpm run db:push              # Push schema directly (dev)
+pnpm run db:studio            # Drizzle Studio UI (port 4984)
+pnpm run db:seed              # Seed database
 
-# Build for production
-pnpm build
-
-# Start production server
-pnpm start
-
-# Run TypeScript linter
-pnpm run lint
+# Docker (services: db, app, studio, nginx)
+docker compose up -d          # Start all services
+docker compose down           # Stop all services
+pnpm run build:standalone     # Build standalone output for Docker
+pnpm run clean:install        # Nuclear reinstall (rm node_modules + lockfile)
 ```
+
+## Environment Setup
+
+Required env vars (see `.env.example`):
+
+| Variable | Docker value | Local dev value |
+|----------|-------------|-----------------|
+| `DATABASE_URL` | `postgresql://admin:secret@db:5432/promptvault_db` | `postgresql://admin:secret@localhost:5433/promptvault_db` |
+| `OLLAMA_HOST` | `http://ollama:11434` | `http://localhost:11434` |
+| `DEFAULT_MODEL` | `qwen2.5:1.5b` | `qwen2.5:3b` |
+| `ANALYSIS_MODEL` | `qwen2.5:7b` | `qwen2.5:7b` |
+| `NEXT_PUBLIC_DEFAULT_LOCALE` | `es` | `es` |
+
+Docker uses internal service names (`db`) for networking. Ollama runs on the **host machine** (not containerized) — app reaches it via `host.docker.internal`. External ports: app=3080, db=5433, studio=4984, nginx=80.
 
 ## Key Patterns
 
-- **React Hooks**: Extensive use of `useState`, `useEffect`, `useCallback` for state and side effects
-- **Conditional Rendering**: Tag filters combined with search query (AND logic for tags, text search on current version content)
-- **UUID Generation**: Every prompt and version gets a UUID via `uuid.v4()` for unique identification
-- **Date Tracking**: Timestamps on both prompts and versions for history
-- **Type Safety**: Full TypeScript with strict mode enabled; all major types defined in `src/types/index.ts`
+- **Bilingual everywhere**: All user-facing text has `*Es`/`*En` variants in DB and types
+- **Immutable versions**: New version created on save, old versions preserved in JSONB array
+- **Smart tagging**: Multi-dimensional taxonomy (tag_dimensions -> tags -> prompt_tags) with AI classification
+- **Ollama via OpenAI compat**: AI SDK connects to Ollama's `/v1` endpoint using `@ai-sdk/openai` provider with `apiKey: "ollama"`
+- **Type safety**: Strict TypeScript; types in `src/types/index.ts` + `src/types/forge.ts`
+- **Path alias**: `@/*` maps to `src/*`
+- **Client components**: Most components use `'use client'` directive
+- **Terminal aesthetic**: Monospace font, green accent (`green-400`, `green-600`), fixed header/footer layout
 
-## Important Implementation Details
+## Gotchas
 
-- Versions are **immutable** - new version created on save, old versions preserved
-- Current version pointed to by `currentVersionId` to allow switching without duplication
-- Tag classification runs on `content + title + description` concatenated for broader matching
-- Modal state (`isEditorOpen`, `isNewPrompt`, `selectedPrompt`) manages editor visibility separately
-- Search filters by text (case-insensitive on title/description/content) AND selected tags
-- No persistence layer implemented yet - use localStorage or a backend API for production
-
-## Development Notes
-
-- TypeScript is configured with path alias `@/*` pointing to `src/*` for clean imports
-- All components use `'use client'` directive for Client Component rendering
-- Styling is utility-first Tailwind with a monospace font for terminal aesthetic
-- The app follows a fixed header, scrollable main content, fixed footer layout
-- Green color (`green-400`, `green-600`) used as primary accent color throughout
+- DB host is `db` inside Docker but `localhost:5433` when running Next.js outside Docker
+- The `tags` text array on the `prompts` table is a **read cache** — the source of truth is the `prompt_tags` join table
+- pgvector embeddings are 768-dim (sized for nomic-embed-text / Qwen models)
+- Settings table is a singleton (always `id=1`)
+- The `versions` field on prompts is JSONB (not a separate table)
+- Ollama is **not containerized** — runs on host for GPU access; Docker app uses `extra_hosts: host.docker.internal` to reach it
+- `next.config.ts` wraps config with `withNextIntl()` and sets `serverExternalPackages: ["drizzle-orm"]`
+- i18n middleware matches `["/", "/(es|en)/:path*"]`; default locale is `es`; messages live in `messages/es.json` and `messages/en.json`
+- `APP_DOCKERFILE` env var switches between `Dockerfile.dev` (hot reload) and `Dockerfile` (standalone production)

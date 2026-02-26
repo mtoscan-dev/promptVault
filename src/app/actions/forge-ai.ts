@@ -214,7 +214,7 @@ export async function analyzePromptEnhanced(
   `;
 
   try {
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:3b";
+    const modelToUse = process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || "qwen2.5:7b";
     console.log(`[ForgeAI] Enhanced Analysis using model: ${modelToUse}`);
 
     const { object } = await generateObject({
@@ -314,30 +314,25 @@ export async function optimizePromptEnhanced(
     }
   }
 
-  // For 3B models: keep the system prompt SHORT and concrete.
-  // Verbose rubrics get copied into the output as template sections.
-  const systemPrompt = `You MUST write in ${langLabel}. Output ONLY the rewritten prompt.
+  const systemPrompt = `You are a prompt engineer. Rewrite the user's prompt to be production-quality.
+Write in ${langLabel}. Output ONLY the rewritten prompt — no commentary, no preamble, no explanation.
 
-Rewrite the user's prompt to be higher quality. Include these elements:
-- Start with a role: "Act as a [specific expert]"
-- Add background context (1-2 sentences explaining why)
-- State the goal clearly in one sentence
-- Mention the target audience
-- Use numbered steps for instructions
-- Specify the output format (e.g. markdown, JSON, table)
-- Add one brief example of expected output
+Apply these improvements:
+1. Define a clear role (e.g. "Act as a [specific expert]")
+2. Add 1-2 sentences of background context
+3. State the goal explicitly
+4. Use numbered steps for multi-step instructions
+5. Specify the desired output format
+${scoreContext ? `\nWeakest areas:\n${scoreContext}` : ""}
+${improvements ? `\nPriority fixes:\n${improvements}` : ""}
+
+Rules:
+- Start directly with the rewritten prompt (no "Here is..." preamble)
 - Use markdown formatting
-${scoreContext ? `\nWeakest areas to focus on:\n${scoreContext}` : ""}
-${improvements ? `\nSpecific fixes:\n${improvements}` : ""}
-
-STRICT RULES:
-- Keep the rewritten prompt under 600 words. Be concise.
-- Do NOT include section headers like "Instruction Quality" or "Viability".
-- Do NOT add commentary before or after the prompt.
-- Start your response directly with "Act as" or "# ".`;
+- Keep it concise but thorough`;
 
   try {
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:3b";
+    const modelToUse = process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || "qwen2.5:7b";
     console.log(
       `[ForgeAI] Enhanced Optimization with generateText (score: ${previousScore}/75)...`,
     );
@@ -354,8 +349,8 @@ STRICT RULES:
       model: ollama(modelToUse),
       system: systemPrompt,
       prompt: inputContent,
-      temperature: 0.6,
-      maxOutputTokens: 400,
+      temperature: 0.5,
+      maxOutputTokens: 800,
     });
 
     // Post-process: strip meta-commentary that small models add

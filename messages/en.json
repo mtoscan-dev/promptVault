@@ -56,6 +56,8 @@
     "aiSuggestions": "AI Suggestions",
     "applyAll": "Apply All",
     "autoTagInfo": "Tags are auto-suggested as you type.",
+    "analysisError": "Analysis failed. Check that Ollama is running.",
+    "optimizeError": "Optimization failed. Try again.",
     "Evaluation": {
       "totalScore": "Total Score",
       "refinementSuggestions": "Refinement Suggestions",

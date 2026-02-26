@@ -57,6 +57,8 @@
     "aiSuggestions": "Sugerencias IA",
     "applyAll": "Aplicar Todo",
     "autoTagInfo": "Las etiquetas se sugieren automáticamente mientras escribes.",
+    "analysisError": "El análisis falló. Verifica que Ollama esté activo.",
+    "optimizeError": "La optimización falló. Intenta de nuevo.",
     "Evaluation": {
       "totalScore": "Puntuación Total",
       "refinementSuggestions": "Sugerencias de Refinamiento",
