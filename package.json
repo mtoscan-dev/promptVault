@@ -14,7 +14,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio --port 4984",
-    "db:seed": "DATABASE_URL=postgresql://admin:secret@localhost:5433/promptvault_db pnpm tsx db/seed.ts"
+    "db:seed": "DATABASE_URL=postgresql://admin:secret@localhost:5433/promptvault_db pnpm tsx db/seed.ts",
+    "db:seed-tags": "DATABASE_URL=postgresql://admin:secret@localhost:5433/promptvault_db pnpm tsx src/db/seed-tags.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.29",
