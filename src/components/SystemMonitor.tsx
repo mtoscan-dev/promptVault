@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/utils/cn";
 import { useTranslations } from "next-intl";
-import { Cpu, Zap, Radio, Wifi, WifiOff } from "lucide-react";
+import { Cpu, Zap, Radio } from "lucide-react";
 import { getSystemStatus } from "@/app/actions/forge-ai";
 
 interface SystemMonitorProps {
@@ -10,11 +10,12 @@ interface SystemMonitorProps {
 }
 
 interface SystemStatus {
-  cpu: number;
   ollama: {
     online: boolean;
     model: string | null;
     memoryMB: number;
+    modelLoaded: boolean;
+    gpuPercent: number;
   };
 }
 
@@ -62,13 +63,23 @@ export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
     return () => clearInterval(id);
   }, [isActive]);
 
-  const cpuLoad = status?.cpu ?? 0;
   const memoryMB = status?.ollama.memoryMB ?? 0;
   const ollamaOnline = status?.ollama.online ?? false;
   const modelName = status?.ollama.model ?? null;
+  const modelLoaded = status?.ollama.modelLoaded ?? false;
+  const gpuPercent = status?.ollama.gpuPercent ?? 0;
 
   // Strip ":latest" suffix for cleaner display
   const displayModel = modelName?.replace(/:latest$/, "") ?? null;
+
+  // Compute processor label: "GPU", "CPU", or "GPU/CPU" split
+  const processorLabel = modelLoaded
+    ? gpuPercent === 100
+      ? "GPU"
+      : gpuPercent === 0
+        ? "CPU"
+        : `GPU ${gpuPercent}%`
+    : "—";
 
   return (
     <div
@@ -77,7 +88,7 @@ export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
         className,
       )}
     >
-      {/* Neural Load (CPU) — Real */}
+      {/* Processor — Ollama GPU/CPU split */}
       <div className="flex flex-col min-w-[100px]">
         <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono mb-0.5 tracking-tighter">
           <span className="flex items-center gap-1">
@@ -87,21 +98,29 @@ export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
           <span
             className={cn(
               "font-bold transition-colors duration-300",
-              isActive ? "text-yellow-400" : "text-green-400",
+              !modelLoaded
+                ? "text-gray-500"
+                : gpuPercent > 0
+                  ? "text-green-400"
+                  : "text-yellow-400",
             )}
           >
-            {cpuLoad}%
+            {processorLabel}
           </span>
         </div>
         <div className="h-1 bg-white/10 rounded-full overflow-hidden w-full relative">
           <div
             className={cn(
               "absolute left-0 top-0 h-full transition-all duration-700 ease-out",
-              isActive
-                ? "bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]"
-                : "bg-green-500/50",
+              !modelLoaded
+                ? "bg-gray-600"
+                : gpuPercent > 0
+                  ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"
+                  : "bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]",
             )}
-            style={{ width: `${Math.min(cpuLoad, 100)}%` }}
+            style={{
+              width: modelLoaded ? `${gpuPercent}%` : "0%",
+            }}
           />
         </div>
       </div>

@@ -506,11 +506,17 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
       temperature: 0.1, // Low temp for precision
     });
 
-    console.log("[ForgeAI] Suggested Tag IDs:", object.tagIds);
+    console.log("[ForgeAI] Suggested Tag IDs (raw):", object.tagIds);
 
     // 3. Hydrate tags from DB records
+    // Strip brackets/quotes the LLM may wrap around slugs (e.g. "[coding]" → "coding")
+    const cleanedIds = object.tagIds.map((id) =>
+      id.replace(/[\[\]"']/g, "").trim(),
+    );
+    console.log("[ForgeAI] Suggested Tag IDs (cleaned):", cleanedIds);
+
     // We map the DB 'slug' to the 'id' field expected by the UI/SmartTag interface
-    const hydratedTags = object.tagIds
+    const hydratedTags = cleanedIds
       .map((slug) => allTags.find((t) => t.slug === slug))
       .filter((t): t is (typeof allTags)[0] => !!t)
       .map((t) => ({
@@ -557,43 +563,18 @@ export async function checkAIGateway() {
 
 /**
  * Lightweight system status check for the SystemMonitor component.
- * Fetches real CPU usage, Ollama connectivity, and model memory — no LLM inference.
+ * Fetches Ollama connectivity, running model info, and VRAM usage — no LLM inference.
  */
 export async function getSystemStatus() {
   const host = process.env.OLLAMA_HOST || "http://localhost:11434";
   const defaultModel = process.env.DEFAULT_MODEL || DEFAULT_LLM;
 
-  // --- CPU Usage (delta measurement for real-time load) ---
-  const os = await import("os");
-
-  const getCpuSnapshot = () => {
-    const cpus = os.cpus();
-    let idle = 0;
-    let total = 0;
-    for (const cpu of cpus) {
-      for (const type in cpu.times) {
-        total += cpu.times[type as keyof typeof cpu.times];
-      }
-      idle += cpu.times.idle;
-    }
-    return { idle, total };
-  };
-
-  const snap1 = getCpuSnapshot();
-  await new Promise((r) => setTimeout(r, 500));
-  const snap2 = getCpuSnapshot();
-
-  const idleDelta = snap2.idle - snap1.idle;
-  const totalDelta = snap2.total - snap1.total;
-  const cpuPercent =
-    totalDelta > 0
-      ? Math.round(((totalDelta - idleDelta) / totalDelta) * 100)
-      : 0;
-
-  // --- Ollama Status ---
   let ollamaOnline = false;
   let activeModel: string | null = null;
   let modelMemoryMB = 0;
+  let modelLoaded = false;
+  let sizeVram = 0;
+  let sizeTotal = 0;
 
   try {
     // Check connectivity + available models via /api/tags
@@ -604,7 +585,6 @@ export async function getSystemStatus() {
     if (tagsRes.ok) {
       ollamaOnline = true;
       const tagsData = await tagsRes.json();
-      // Find the configured model in available models
       const models = tagsData.models || [];
       const configuredModel = models.find(
         (m: any) =>
@@ -613,7 +593,7 @@ export async function getSystemStatus() {
       activeModel = configuredModel?.name || models[0]?.name || defaultModel;
     }
 
-    // Get running model memory via /api/ps
+    // Get running model info via /api/ps
     if (ollamaOnline) {
       try {
         const psRes = await fetch(`${host}/api/ps`, {
@@ -623,11 +603,13 @@ export async function getSystemStatus() {
           const psData = await psRes.json();
           const runningModels = psData.models || [];
           if (runningModels.length > 0) {
-            // Use the first running model's size (bytes -> MB)
-            const sizeBytes = runningModels[0].size || 0;
+            const model = runningModels[0];
+            const sizeBytes = model.size || 0;
             modelMemoryMB = Math.round(sizeBytes / (1024 * 1024));
-            // Override activeModel with what's actually running
-            activeModel = runningModels[0].name || activeModel;
+            activeModel = model.name || activeModel;
+            modelLoaded = true;
+            sizeVram = model.size_vram || 0;
+            sizeTotal = sizeBytes;
           }
         }
       } catch {
@@ -638,12 +620,19 @@ export async function getSystemStatus() {
     ollamaOnline = false;
   }
 
+  // Calculate GPU vs CPU split (what % of the model is in VRAM)
+  const gpuPercent =
+    modelLoaded && sizeTotal > 0
+      ? Math.round((sizeVram / sizeTotal) * 100)
+      : 0;
+
   return {
-    cpu: cpuPercent,
     ollama: {
       online: ollamaOnline,
       model: activeModel,
       memoryMB: modelMemoryMB,
+      modelLoaded,
+      gpuPercent,
     },
   };
 }
