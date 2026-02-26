@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const { messages } = await req.json();
 
   const result = await streamText({
-    model: ollama("qwen2.5:1.5b"),
+    model: ollama("qwen2.5:3b"),
     messages,
   });
 

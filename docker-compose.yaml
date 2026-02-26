@@ -48,7 +48,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       OLLAMA_HOST: ${OLLAMA_HOST}
-      DEFAULT_MODEL: ${DEFAULT_MODEL:-qwen2.5:1.5b}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-qwen2.5:3b}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

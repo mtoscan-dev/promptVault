@@ -2,7 +2,7 @@
 
 # Configuration
 # Models required for Vault functionality
-REQUIRED_MODELS=("qwen2.5:1.5b" "nomic-embed-text")
+REQUIRED_MODELS=("qwen2.5:3b" "nomic-embed-text")
 
 echo "🔍 Checking local Ollama installation..."
 

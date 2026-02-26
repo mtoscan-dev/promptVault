@@ -101,13 +101,13 @@ pnpm run clean:install        # Nuclear reinstall (rm node_modules + lockfile)
 
 Required env vars (see `.env.example`):
 
-| Variable | Docker value | Local dev value |
-|----------|-------------|-----------------|
-| `DATABASE_URL` | `postgresql://admin:secret@db:5432/promptvault_db` | `postgresql://admin:secret@localhost:5433/promptvault_db` |
-| `OLLAMA_HOST` | `http://ollama:11434` | `http://localhost:11434` |
-| `DEFAULT_MODEL` | `qwen2.5:1.5b` | `qwen2.5:3b` |
-| `ANALYSIS_MODEL` | `qwen2.5:7b` | `qwen2.5:7b` |
-| `NEXT_PUBLIC_DEFAULT_LOCALE` | `es` | `es` |
+| Variable                     | Docker value                                       | Local dev value                                           |
+| ---------------------------- | -------------------------------------------------- | --------------------------------------------------------- |
+| `DATABASE_URL`               | `postgresql://admin:secret@db:5432/promptvault_db` | `postgresql://admin:secret@localhost:5433/promptvault_db` |
+| `OLLAMA_HOST`                | `http://ollama:11434`                              | `http://localhost:11434`                                  |
+| `DEFAULT_MODEL`              | `qwen2.5:1.5b`                                     | `qwen2.5:3b`                                              |
+| `ANALYSIS_MODEL`             | `qwen2.5:7b`                                       | `qwen2.5:7b`                                              |
+| `NEXT_PUBLIC_DEFAULT_LOCALE` | `es`                                               | `es`                                                      |
 
 Docker uses internal service names (`db`) for networking. Ollama runs on the **host machine** (not containerized) — app reaches it via `host.docker.internal`. External ports: app=3080, db=5433, studio=4984, nginx=80.
 

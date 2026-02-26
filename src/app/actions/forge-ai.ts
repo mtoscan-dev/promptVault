@@ -3,7 +3,7 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, generateObject, generateText } from "ai";
 import { z } from "zod";
-
+const DEFAULT_LLM = "qwen2.5:3b";
 // Create an OpenAI provider instance that points to our local Ollama
 // We use the OpenAI compatibility layer of Ollama
 const ollamaBaseUrl = process.env.OLLAMA_HOST + "/v1";
@@ -16,7 +16,7 @@ const ollama = createOpenAI({
 
 export async function streamForgeResponse(
   messages: any[],
-  model: string = process.env.DEFAULT_MODEL || "qwen2.5:3b",
+  model: string = process.env.DEFAULT_MODEL || DEFAULT_LLM,
 ) {
   try {
     // Basic validation
@@ -68,7 +68,7 @@ export async function translatePromptFields(
   `;
 
   try {
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:3b";
+    const modelToUse = process.env.DEFAULT_MODEL || DEFAULT_LLM;
     console.log(`[ForgeAI] Generating object using model: ${modelToUse}`);
     const { object } = await generateObject({
       model: ollama(modelToUse),
@@ -131,7 +131,7 @@ export async function generatePromptMetadata(
 
   try {
     console.log(`[ForgeAI] Generating metadata (Target: ${language})...`);
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:3b";
+    const modelToUse = process.env.DEFAULT_MODEL || DEFAULT_LLM;
     console.log(`[ForgeAI] Metadata generation using model: ${modelToUse}`);
     const isSpanish =
       language === "es" || (isAuto && content.match(/[áéíóúñ¿¡]/i));
@@ -173,8 +173,11 @@ export async function analyzePromptEnhanced(
   const langName = isSpanish ? "Spanish" : "English";
 
   try {
-    const modelToUse = process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || "qwen2.5:3b";
-    console.log(`[ForgeAI] Enhanced Analysis (2-pass) using model: ${modelToUse}`);
+    const modelToUse =
+      process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || DEFAULT_LLM;
+    console.log(
+      `[ForgeAI] Enhanced Analysis (2-pass) using model: ${modelToUse}`,
+    );
 
     // --- Pass 1: Free-form reasoning (model thinks better in plain text) ---
     const reasoningPrompt = `You are a prompt engineering expert. Analyze the following prompt thoroughly.
@@ -197,7 +200,11 @@ Write your analysis in ${langName}.`;
       maxOutputTokens: 500,
     });
 
-    console.log("[ForgeAI] Pass 1 (reasoning) complete:", reasoning.length, "chars");
+    console.log(
+      "[ForgeAI] Pass 1 (reasoning) complete:",
+      reasoning.length,
+      "chars",
+    );
 
     // --- Pass 2: Structured scoring with simplified 1-5 scale ---
     // Small models score more accurately on a 1-5 range than 0-20.
@@ -255,7 +262,10 @@ ${reasoning}`;
       }),
       messages: [
         { role: "system", content: scoringPrompt },
-        { role: "user", content: `Rate the prompt: "${content.substring(0, 500)}"` },
+        {
+          role: "user",
+          content: `Rate the prompt: "${content.substring(0, 500)}"`,
+        },
       ],
       temperature: 0,
     });
@@ -267,27 +277,28 @@ ${reasoning}`;
       viability: rawScores.categories.viability.rating,
     });
 
-    // Scale 1-5 ratings to UI ranges: structure/context/quality → 0-20, viability → 0-15
+    // Scale 1-5 ratings to UI ranges: structure/context/quality → 0-16, viability → 0-12
+    // Total max = 60 (calibrated for 3B model output range)
     const scaleScore = (rating: number, max: number) =>
       Math.round((rating / 5) * max);
 
     const object = {
       categories: {
         structure: {
-          score: scaleScore(rawScores.categories.structure.rating, 20),
+          score: scaleScore(rawScores.categories.structure.rating, 16),
           feedback: rawScores.categories.structure.feedback,
           strengths: rawScores.categories.structure.strengths,
         },
         context: {
-          score: scaleScore(rawScores.categories.context.rating, 20),
+          score: scaleScore(rawScores.categories.context.rating, 16),
           feedback: rawScores.categories.context.feedback,
         },
         quality: {
-          score: scaleScore(rawScores.categories.quality.rating, 20),
+          score: scaleScore(rawScores.categories.quality.rating, 16),
           feedback: rawScores.categories.quality.feedback,
         },
         viability: {
-          score: scaleScore(rawScores.categories.viability.rating, 15),
+          score: scaleScore(rawScores.categories.viability.rating, 12),
           feedback: rawScores.categories.viability.feedback,
         },
       },
@@ -363,7 +374,8 @@ Rules:
 - Keep it concise but thorough`;
 
   try {
-    const modelToUse = process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || "qwen2.5:3b";
+    const modelToUse =
+      process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || DEFAULT_LLM;
     console.log(
       `[ForgeAI] Enhanced Optimization with generateText (score: ${previousScore}/75)...`,
     );
@@ -388,7 +400,9 @@ Rules:
     let optimizedContent = text.trim();
 
     // Strip thinking tags from models like Qwen3 that use <think>...</think>
-    optimizedContent = optimizedContent.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+    optimizedContent = optimizedContent
+      .replace(/<think>[\s\S]*?<\/think>/g, "")
+      .trim();
 
     // Strip preamble lines (e.g. "Here is the revised prompt:", "As a prompt engineer...")
     optimizedContent = optimizedContent
@@ -439,7 +453,7 @@ import { tags as tagsTable, tagDimensions } from "@/db/schema";
 import { SmartTag } from "@/types";
 
 export async function suggestSmartTags(content: string, locale: string = "en") {
-  const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:3b";
+  const modelToUse = process.env.DEFAULT_MODEL || DEFAULT_LLM;
   console.log(`[ForgeAI] Suggesting smart tags using model: ${modelToUse}...`);
 
   try {
@@ -517,7 +531,7 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
 
 export async function checkAIGateway() {
   try {
-    const model = process.env.DEFAULT_MODEL || "qwen2.5:3b";
+    const model = process.env.DEFAULT_MODEL || DEFAULT_LLM;
     console.log(`[ForgeAI] Checking health with model: ${model}`);
 
     // Simple fast check
@@ -547,7 +561,7 @@ export async function checkAIGateway() {
  */
 export async function getSystemStatus() {
   const host = process.env.OLLAMA_HOST || "http://localhost:11434";
-  const defaultModel = process.env.DEFAULT_MODEL || "qwen2.5:3b";
+  const defaultModel = process.env.DEFAULT_MODEL || DEFAULT_LLM;
 
   // --- CPU Usage (delta measurement for real-time load) ---
   const os = await import("os");
@@ -667,7 +681,7 @@ export async function predictDimension(
   dimensions: { id: string; nameEn: string; nameEs: string }[],
 ): Promise<{ success: boolean; dimensionId?: string }> {
   try {
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:3b";
+    const modelToUse = process.env.DEFAULT_MODEL || DEFAULT_LLM;
 
     const context = dimensions
       .map((d) => `- ID: ${d.id}, Name: ${d.nameEn} / ${d.nameEs}`)

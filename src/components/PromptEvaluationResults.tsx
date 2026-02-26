@@ -15,14 +15,14 @@ import { useLocale, useTranslations } from "next-intl";
 
 // --- Scoring Constants ---
 const SCORE_MAX = {
-  structure: 20,
-  context: 20,
-  quality: 20,
-  viability: 15,
-  total: 75,
+  structure: 16,
+  context: 16,
+  quality: 16,
+  viability: 12,
+  total: 60,
 } as const;
 
-const LOW_SCORE_THRESHOLD = 60;
+const LOW_SCORE_THRESHOLD = 48;
 
 interface EvaluationCategory {
   score: number;
