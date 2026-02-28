@@ -6,5 +6,9 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - .:/app
-      - /app/node_modules
-      - /app/.next
+      - vault_app_modules:/app/node_modules
+      - vault_app_next:/app/.next
+
+volumes:
+  vault_app_modules:
+  vault_app_next:

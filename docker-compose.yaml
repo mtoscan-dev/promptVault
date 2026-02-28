@@ -37,6 +37,21 @@ services:
   #   networks:
   #     - vault_network
 
+  # Schema sync (idempotent — solo aplica diferencias)
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: vault_migrate
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+    command: pnpm drizzle-kit push --config drizzle.config.ts
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - vault_network
+
   # Aplicación Next.js (Standalone Production)
   app:
     build:
@@ -66,6 +81,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks:
       - vault_network
 
@@ -87,10 +104,12 @@ services:
           memory: 512M
     volumes:
       - .:/app
-      - /app/node_modules
+      - vault_studio_modules:/app/node_modules
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks:
       - vault_network
 
@@ -119,6 +138,7 @@ services:
 
 volumes:
   vault_pgdata:
+  vault_studio_modules:
 
 networks:
   vault_network:
