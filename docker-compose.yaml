@@ -8,10 +8,10 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d:ro # Scripts de inicialización
+      - vault_pgdata:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d:ro
     ports:
-      - "${PORT_DB_EXTERNAL:-5433}:5432" # Redirige 5433 a 5432
+      - "${PORT_DB_EXTERNAL:-5433}:5432"
     deploy:
       resources:
         limits:
@@ -29,45 +29,43 @@ services:
   #   image: ollama/ollama
   #   container_name: vault_ai
   #   volumes:
-  #     - ./ollama_data:/root/.ollama
+  #     - ollama_data:/root/.ollama
   #   ports:
   #     - "${OLLAMA_PORT}:11434"
   #   environment:
-  #     - OLLAMA_KEEP_ALIVE=30m # El modelo se queda en RAM por 30 minutos tras el último uso
-  #
+  #     - OLLAMA_KEEP_ALIVE=30m
   #   networks:
   #     - vault_network
 
-  # Aplicación Next.js (Drizzle + Soberanía)
+  # Aplicación Next.js (Standalone Production)
   app:
     build:
       context: .
-      dockerfile: ${APP_DOCKERFILE:-Dockerfile} # Usa la variable o el standalone por defecto
+      dockerfile: Dockerfile
     container_name: vault_app
     restart: always
     environment:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       OLLAMA_HOST: ${OLLAMA_HOST}
       DEFAULT_MODEL: ${DEFAULT_MODEL:-qwen2.5:3b}
+      ANALYSIS_MODEL: ${ANALYSIS_MODEL:-qwen2.5:7b}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "${PORT_APP_EXTERNAL:-3080}:3000" # Redirige 3080 a 3000
-    # Los volúmenes solo son necesarios en desarrollo (Hot Reload)
-    # En producción (standalone) Docker los ignora si el archivo no los usa
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
+      - "${PORT_APP_EXTERNAL:-3080}:3000"
     deploy:
       resources:
         limits:
           memory: ${APP_MEM_LIMIT:-1G}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
     depends_on:
       db:
         condition: service_healthy
-      # ollama:
-      #   condition: service_started
     networks:
       - vault_network
 
@@ -75,7 +73,7 @@ services:
   studio:
     build:
       context: .
-      dockerfile: ${APP_DOCKERFILE:-Dockerfile}
+      dockerfile: Dockerfile.dev
     container_name: vault_studio
     restart: always
     environment:
@@ -103,11 +101,24 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro # Mapeo en modo solo lectura
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - app
+      app:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     networks:
       - vault_network
+
+volumes:
+  vault_pgdata:
 
 networks:
   vault_network:
