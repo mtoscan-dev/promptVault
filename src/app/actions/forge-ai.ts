@@ -3,7 +3,7 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, generateObject, generateText } from "ai";
 import { z } from "zod";
-
+const DEFAULT_LLM = "qwen2.5:3b";
 // Create an OpenAI provider instance that points to our local Ollama
 // We use the OpenAI compatibility layer of Ollama
 const ollamaBaseUrl = process.env.OLLAMA_HOST + "/v1";
@@ -16,7 +16,7 @@ const ollama = createOpenAI({
 
 export async function streamForgeResponse(
   messages: any[],
-  model: string = process.env.DEFAULT_MODEL || "qwen2.5:14b",
+  model: string = process.env.DEFAULT_MODEL || DEFAULT_LLM,
 ) {
   try {
     // Basic validation
@@ -68,7 +68,7 @@ export async function translatePromptFields(
   `;
 
   try {
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    const modelToUse = process.env.DEFAULT_MODEL || DEFAULT_LLM;
     console.log(`[ForgeAI] Generating object using model: ${modelToUse}`);
     const { object } = await generateObject({
       model: ollama(modelToUse),
@@ -131,7 +131,7 @@ export async function generatePromptMetadata(
 
   try {
     console.log(`[ForgeAI] Generating metadata (Target: ${language})...`);
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    const modelToUse = process.env.DEFAULT_MODEL || DEFAULT_LLM;
     console.log(`[ForgeAI] Metadata generation using model: ${modelToUse}`);
     const isSpanish =
       language === "es" || (isAuto && content.match(/[áéíóúñ¿¡]/i));
@@ -172,61 +172,87 @@ export async function analyzePromptEnhanced(
   const isSpanish = language === "es";
   const langName = isSpanish ? "Spanish" : "English";
 
-  const systemPrompt = `
-    ROLE: Expert Prompt Engineer and Quality Auditor.
-    TASK: Systematically analyze the provided prompt using the "Prompt Evaluation Chain".
-    
-    EVALUATION CRITERIA (Categorized):
-    A. Structure & Clarity: Clarity/Specificity, Instructions Structure, Formating, Brevity vs Detail.
-    B. Context & Purpose: Background Info, Task Definition, Persona/Role, Audience.
-    C. Instruction Quality: Output Style, Step-by-Step Reasoning, Consistency, Examples.
-    D. Viability: Iteration Potential, Model Adequacy, Constraints Feasibility.
-
-    SCORING:
-    - Each category (A, B, C) is out of 20 points.
-    - Category D is out of 15 points.
-    - Total Score: Max 75 points.
-
-    OUTPUT RULES:
-    1. Feedback must be in ${langName}.
-    2. Be critical and use professional engineering terminology.
-  `;
-
   try {
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
-    console.log(`[ForgeAI] Enhanced Analysis using model: ${modelToUse}`);
+    const modelToUse =
+      process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || DEFAULT_LLM;
+    console.log(
+      `[ForgeAI] Enhanced Analysis (2-pass) using model: ${modelToUse}`,
+    );
 
-    const { object } = await generateObject({
+    // --- Pass 1: Free-form reasoning (model thinks better in plain text) ---
+    const reasoningPrompt = `You are a prompt engineering expert. Analyze the following prompt thoroughly.
+
+Evaluate these 4 categories. For each, list what's present and what's missing:
+
+A. Structure & Clarity: Is the request clear and unambiguous? Are instructions logically ordered? Is formatting used? Is detail level appropriate?
+B. Context & Purpose: Is background info provided? Is the goal stated? Is there a role/persona? Is the audience defined?
+C. Instruction Quality: Is output format specified? Does it encourage step-by-step reasoning? Are instructions consistent? Are examples provided?
+D. Viability: Can it be easily refined? Is it suited for the target model? Are constraints realistic?
+
+For each category, note specific strengths and weaknesses. Then list the top 3 most impactful improvements.
+Write your analysis in ${langName}.`;
+
+    const { text: reasoning } = await generateText({
+      model: ollama(modelToUse),
+      system: reasoningPrompt,
+      prompt: content,
+      temperature: 0,
+      maxOutputTokens: 500,
+    });
+
+    console.log(
+      "[ForgeAI] Pass 1 (reasoning) complete:",
+      reasoning.length,
+      "chars",
+    );
+
+    // --- Pass 2: Structured scoring with simplified 1-5 scale ---
+    // Small models score more accurately on a 1-5 range than 0-20.
+    // We scale up to the UI's expected ranges in post-processing.
+    const scoringPrompt = `Based on the analysis below, rate each category on a scale of 1 to 5.
+
+Rating guide:
+1 = Very poor (most elements missing)
+2 = Weak (some elements present but vague)
+3 = Adequate (core elements present, room for improvement)
+4 = Good (well-structured with minor gaps)
+5 = Excellent (comprehensive and well-crafted)
+
+Be fair. Reward what IS present. A prompt with clear goal, structure, and format deserves 3-4 even if not perfect.
+
+ANALYSIS:
+${reasoning}`;
+
+    const { object: rawScores } = await generateObject({
       model: ollama(modelToUse),
       schema: z.object({
-        totalScore: z.number().int().min(0).max(75),
         categories: z.object({
           structure: z.object({
-            score: z.number().min(0).max(20),
+            rating: z.number().int().min(1).max(5),
             feedback: z
               .string()
-              .describe(`Brief analysis of category A in ${langName}.`),
+              .describe(`1-2 sentence summary in ${langName}.`),
             strengths: z
               .array(z.string())
-              .describe("Specific strengths in category A."),
+              .describe("Specific strengths found."),
           }),
           context: z.object({
-            score: z.number().min(0).max(20),
+            rating: z.number().int().min(1).max(5),
             feedback: z
               .string()
-              .describe(`Brief analysis of category B in ${langName}.`),
+              .describe(`1-2 sentence summary in ${langName}.`),
           }),
           quality: z.object({
-            score: z.number().min(0).max(20),
+            rating: z.number().int().min(1).max(5),
             feedback: z
               .string()
-              .describe(`Brief analysis of category C in ${langName}.`),
+              .describe(`1-2 sentence summary in ${langName}.`),
           }),
           viability: z.object({
-            score: z.number().min(0).max(15),
+            rating: z.number().int().min(1).max(5),
             feedback: z
               .string()
-              .describe(`Brief analysis of category D in ${langName}.`),
+              .describe(`1-2 sentence summary in ${langName}.`),
           }),
         }),
         prioritySuggestions: z
@@ -235,14 +261,60 @@ export async function analyzePromptEnhanced(
           .describe(`Top 3 actionable improvements in ${langName}.`),
       }),
       messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content },
+        { role: "system", content: scoringPrompt },
+        {
+          role: "user",
+          content: `Rate the prompt: "${content.substring(0, 500)}"`,
+        },
       ],
-      temperature: 0.1,
+      temperature: 0,
     });
 
-    console.log("[ForgeAI] Enhanced Analysis complete:", object);
-    return { success: true, data: object };
+    console.log("[ForgeAI] Pass 2 (scoring) complete — raw ratings:", {
+      structure: rawScores.categories.structure.rating,
+      context: rawScores.categories.context.rating,
+      quality: rawScores.categories.quality.rating,
+      viability: rawScores.categories.viability.rating,
+    });
+
+    // Scale 1-5 ratings to UI ranges: structure/context/quality → 0-16, viability → 0-12
+    // Total max = 60 (calibrated for 3B model output range)
+    const scaleScore = (rating: number, max: number) =>
+      Math.round((rating / 5) * max);
+
+    const object = {
+      categories: {
+        structure: {
+          score: scaleScore(rawScores.categories.structure.rating, 16),
+          feedback: rawScores.categories.structure.feedback,
+          strengths: rawScores.categories.structure.strengths,
+        },
+        context: {
+          score: scaleScore(rawScores.categories.context.rating, 16),
+          feedback: rawScores.categories.context.feedback,
+        },
+        quality: {
+          score: scaleScore(rawScores.categories.quality.rating, 16),
+          feedback: rawScores.categories.quality.feedback,
+        },
+        viability: {
+          score: scaleScore(rawScores.categories.viability.rating, 12),
+          feedback: rawScores.categories.viability.feedback,
+        },
+      },
+      prioritySuggestions: rawScores.prioritySuggestions,
+    };
+
+    const computedTotal =
+      object.categories.structure.score +
+      object.categories.context.score +
+      object.categories.quality.score +
+      object.categories.viability.score;
+
+    const correctedData = { ...object, totalScore: computedTotal };
+
+    console.log("[ForgeAI] Enhanced Analysis complete:", correctedData);
+    return { success: true, data: correctedData };
   } catch (error) {
     console.error("Enhanced Analysis Error:", error);
     return { success: false, error: "Failed to perform enhanced analysis." };
@@ -251,53 +323,125 @@ export async function analyzePromptEnhanced(
 
 export async function optimizePromptEnhanced(
   content: string,
-  analysisReport: any,
+  analysisReport: unknown,
+  previousScore: number,
   language: string = "en",
 ) {
   const isSpanish = language === "es";
+  const langLabel = isSpanish ? "Spanish" : "English";
 
-  const systemPrompt = `
-    ROLE: Expert Prompt Engineer.
-    TASK: Systematically refine the original prompt based on its Evaluation Report.
-    
-    INPUT:
-    1. Original Prompt
-    2. Evaluation Report (JSON with scores and specific feedback)
-    
-    STRATEGY:
-    - High Priority: Fix categories with low scores first.
-    - Preserve: Keep strengths mentioned in the report.
-    - Consistency: Ensure persona, context, and formatting are professional.
-    
-    RULES:
-    1. Output ONLY the optimized prompt content.
-    2. **CRITICAL: MAINTAIN THE ORIGINAL LANGUAGE of the prompt.**
-    3. Do NOT add conversational filler.
-  `;
+  // Extract actionable suggestions and category scores for targeted improvements
+  let improvements = "";
+  let scoreContext = "";
+  if (typeof analysisReport === "object" && analysisReport !== null) {
+    const report = analysisReport as Record<string, unknown>;
+    const suggestions = report.prioritySuggestions;
+    if (Array.isArray(suggestions)) {
+      improvements = suggestions
+        .map((s: unknown, i: number) => `${i + 1}. ${String(s)}`)
+        .join("\n");
+    }
+    // Extract category scores so the model knows what's weakest
+    const cats = report.categories as
+      | Record<string, { score?: number }>
+      | undefined;
+    if (cats) {
+      const scores = [
+        `Structure: ${cats.structure?.score ?? "?"}/20`,
+        `Context: ${cats.context?.score ?? "?"}/20`,
+        `Quality: ${cats.quality?.score ?? "?"}/20`,
+        `Viability: ${cats.viability?.score ?? "?"}/15`,
+      ];
+      scoreContext = `\nCurrent scores (focus on the lowest):\n${scores.join(" | ")}`;
+    }
+  }
+
+  const systemPrompt = `You are a prompt engineer. Rewrite the user's prompt to be production-quality.
+Write in ${langLabel}. Output ONLY the rewritten prompt — no commentary, no preamble, no explanation.
+
+Apply these improvements:
+1. Define a clear role (e.g. "Act as a [specific expert]")
+2. Add 1-2 sentences of background context
+3. State the goal explicitly
+4. Use numbered steps for multi-step instructions
+5. Specify the desired output format
+${scoreContext ? `\nWeakest areas:\n${scoreContext}` : ""}
+${improvements ? `\nPriority fixes:\n${improvements}` : ""}
+
+Rules:
+- Start directly with the rewritten prompt (no "Here is..." preamble)
+- Use markdown formatting
+- Keep it concise but thorough`;
 
   try {
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
-    console.log(`[ForgeAI] Enhanced Optimization...`);
+    const modelToUse =
+      process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || DEFAULT_LLM;
+    console.log(
+      `[ForgeAI] Enhanced Optimization with generateText (score: ${previousScore}/75)...`,
+    );
 
-    const { object } = await generateObject({
+    // Truncate very long input to prevent timeouts and score=0 on re-analysis
+    const maxInputChars = 2000;
+    const inputContent =
+      content.length > maxInputChars
+        ? content.substring(0, maxInputChars) +
+          "\n\n[...truncated for optimization]"
+        : content;
+
+    const { text } = await generateText({
       model: ollama(modelToUse),
-      schema: z.object({
-        optimizedContent: z.string().describe("The fully refined prompt."),
-      }),
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: JSON.stringify({
-            originalPrompt: content,
-            report: analysisReport,
-          }),
-        },
-      ],
-      temperature: 0.3,
+      system: systemPrompt,
+      prompt: inputContent,
+      temperature: 0.5,
+      maxOutputTokens: 600,
     });
 
-    return { success: true, data: object };
+    // Post-process: strip meta-commentary that small models add
+    let optimizedContent = text.trim();
+
+    // Strip thinking tags from models like Qwen3 that use <think>...</think>
+    optimizedContent = optimizedContent
+      .replace(/<think>[\s\S]*?<\/think>/g, "")
+      .trim();
+
+    // Strip preamble lines (e.g. "Here is the revised prompt:", "As a prompt engineer...")
+    optimizedContent = optimizedContent
+      .replace(
+        /^(?:(?:here is|below is|i will|let me|this is|as a prompt)[^\n]*\n+(?:---\n)?)/i,
+        "",
+      )
+      .replace(/^---\n+/, "");
+
+    // Strip epilogue (e.g. "This revised version provides...")
+    optimizedContent = optimizedContent.replace(
+      /\n+(?:---\n+)?(?:this (?:revised|enhanced|improved|updated|new|rewritten) (?:version|prompt)[^\n]*\.?\s*)$/i,
+      "",
+    );
+
+    // Strip leaked rubric category headers
+    optimizedContent = optimizedContent.replace(
+      /\n+(?:Instruction Quality|Viability|Structure & Clarity|Context & Purpose):?\n/gi,
+      "\n",
+    );
+
+    optimizedContent = optimizedContent.trim();
+
+    // Guard: empty output
+    if (!optimizedContent || optimizedContent.length < 10) {
+      console.warn("[ForgeAI] Optimizer returned empty/too-short output");
+      return { success: false, error: "Optimization produced invalid output." };
+    }
+
+    // Guard: identical content (model echoed input)
+    if (optimizedContent.toLowerCase() === content.trim().toLowerCase()) {
+      console.warn("[ForgeAI] Optimizer returned identical content — skipping");
+      return { success: false, error: "Optimization produced no changes." };
+    }
+
+    console.log(
+      `[ForgeAI] Optimization complete: ${content.length} → ${optimizedContent.length} chars`,
+    );
+    return { success: true, data: { optimizedContent } };
   } catch (error) {
     console.error("Enhanced Optimization Error:", error);
     return { success: false, error: "Failed to optimize prompt." };
@@ -309,7 +453,7 @@ import { tags as tagsTable, tagDimensions } from "@/db/schema";
 import { SmartTag } from "@/types";
 
 export async function suggestSmartTags(content: string, locale: string = "en") {
-  const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+  const modelToUse = process.env.DEFAULT_MODEL || DEFAULT_LLM;
   console.log(`[ForgeAI] Suggesting smart tags using model: ${modelToUse}...`);
 
   try {
@@ -362,11 +506,17 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
       temperature: 0.1, // Low temp for precision
     });
 
-    console.log("[ForgeAI] Suggested Tag IDs:", object.tagIds);
+    console.log("[ForgeAI] Suggested Tag IDs (raw):", object.tagIds);
 
     // 3. Hydrate tags from DB records
+    // Strip brackets/quotes the LLM may wrap around slugs (e.g. "[coding]" → "coding")
+    const cleanedIds = object.tagIds.map((id) =>
+      id.replace(/[\[\]"']/g, "").trim(),
+    );
+    console.log("[ForgeAI] Suggested Tag IDs (cleaned):", cleanedIds);
+
     // We map the DB 'slug' to the 'id' field expected by the UI/SmartTag interface
-    const hydratedTags = object.tagIds
+    const hydratedTags = cleanedIds
       .map((slug) => allTags.find((t) => t.slug === slug))
       .filter((t): t is (typeof allTags)[0] => !!t)
       .map((t) => ({
@@ -387,7 +537,7 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
 
 export async function checkAIGateway() {
   try {
-    const model = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    const model = process.env.DEFAULT_MODEL || DEFAULT_LLM;
     console.log(`[ForgeAI] Checking health with model: ${model}`);
 
     // Simple fast check
@@ -409,6 +559,82 @@ export async function checkAIGateway() {
         : "Check Ollama logs",
     };
   }
+}
+
+/**
+ * Lightweight system status check for the SystemMonitor component.
+ * Fetches Ollama connectivity, running model info, and VRAM usage — no LLM inference.
+ */
+export async function getSystemStatus() {
+  const host = process.env.OLLAMA_HOST || "http://localhost:11434";
+  const defaultModel = process.env.DEFAULT_MODEL || DEFAULT_LLM;
+
+  let ollamaOnline = false;
+  let activeModel: string | null = null;
+  let modelMemoryMB = 0;
+  let modelLoaded = false;
+  let sizeVram = 0;
+  let sizeTotal = 0;
+
+  try {
+    // Check connectivity + available models via /api/tags
+    const tagsRes = await fetch(`${host}/api/tags`, {
+      signal: AbortSignal.timeout(3000),
+    });
+
+    if (tagsRes.ok) {
+      ollamaOnline = true;
+      const tagsData = await tagsRes.json();
+      const models = tagsData.models || [];
+      const configuredModel = models.find(
+        (m: any) =>
+          m.name === defaultModel || m.name === `${defaultModel}:latest`,
+      );
+      activeModel = configuredModel?.name || models[0]?.name || defaultModel;
+    }
+
+    // Get running model info via /api/ps
+    if (ollamaOnline) {
+      try {
+        const psRes = await fetch(`${host}/api/ps`, {
+          signal: AbortSignal.timeout(3000),
+        });
+        if (psRes.ok) {
+          const psData = await psRes.json();
+          const runningModels = psData.models || [];
+          if (runningModels.length > 0) {
+            const model = runningModels[0];
+            const sizeBytes = model.size || 0;
+            modelMemoryMB = Math.round(sizeBytes / (1024 * 1024));
+            activeModel = model.name || activeModel;
+            modelLoaded = true;
+            sizeVram = model.size_vram || 0;
+            sizeTotal = sizeBytes;
+          }
+        }
+      } catch {
+        // /api/ps failed but Ollama is still online (no model loaded)
+      }
+    }
+  } catch {
+    ollamaOnline = false;
+  }
+
+  // Calculate GPU vs CPU split (what % of the model is in VRAM)
+  const gpuPercent =
+    modelLoaded && sizeTotal > 0
+      ? Math.round((sizeVram / sizeTotal) * 100)
+      : 0;
+
+  return {
+    ollama: {
+      online: ollamaOnline,
+      model: activeModel,
+      memoryMB: modelMemoryMB,
+      modelLoaded,
+      gpuPercent,
+    },
+  };
 }
 
 export async function getTaxonomy() {
@@ -444,7 +670,7 @@ export async function predictDimension(
   dimensions: { id: string; nameEn: string; nameEs: string }[],
 ): Promise<{ success: boolean; dimensionId?: string }> {
   try {
-    const modelToUse = process.env.DEFAULT_MODEL || "qwen2.5:14b";
+    const modelToUse = process.env.DEFAULT_MODEL || DEFAULT_LLM;
 
     const context = dimensions
       .map((d) => `- ID: ${d.id}, Name: ${d.nameEn} / ${d.nameEs}`)

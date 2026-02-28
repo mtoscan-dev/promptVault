@@ -3,7 +3,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Habilitar pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.29.3 --activate
 
 # En modo DEV, instalamos todo (incluyendo devDependencies)
 COPY pnpm-lock.yaml package.json ./

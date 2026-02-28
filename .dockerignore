@@ -16,12 +16,11 @@ backups/*.gz
 .git
 .gitignore
 
-# Scripts y Herramientas del Host
-*.sh
-init-db/*.sql
+# Dockerfiles y Compose (no necesarios dentro de la imagen)
 Dockerfile
 Dockerfile.dev
-docker-compose.yml
+docker-compose.yaml
+docker-compose.override.yaml
 
 # Basura del Sistema
 .DS_Store

@@ -33,6 +33,8 @@
     "v": "v",
     "translate": "Translate",
     "analyze": "Analyze",
+    "switchingToEnglish": "Switching to EN for accurate analysis...",
+    "translateBeforeAnalyze": "Translate to English before analyzing",
     "analyzing": "ANALYZING...",
     "score": "SCORE",
     "autoSuggest": "Auto-Suggest",
@@ -54,10 +56,14 @@
     "aiSuggestions": "AI Suggestions",
     "applyAll": "Apply All",
     "autoTagInfo": "Tags are auto-suggested as you type.",
+    "analysisError": "Analysis failed. Check that Ollama is running.",
+    "optimizeError": "Optimization failed. Try again.",
     "Evaluation": {
       "totalScore": "Total Score",
       "refinementSuggestions": "Refinement Suggestions",
       "aiRefinement": "AI Refinement",
+      "scoreGood": "Score is solid. Manual tweaks recommended from here.",
+      "processing": "Processing...",
       "categories": {
         "structure": "Structure",
         "context": "Context",
@@ -74,9 +80,9 @@
       },
       "analyze": {
         "tokenizing": "Tokenizing...",
-        "checking": "Checking grammar...",
-        "evaluating": "Evaluating clarity...",
-        "scoring": "Scoring..."
+        "checking": "Reasoning about structure...",
+        "evaluating": "Evaluating quality...",
+        "scoring": "Computing scores..."
       },
       "autoSuggest": {
         "reading": "Reading content...",
@@ -98,7 +104,10 @@
     "memory": "CTX MEM",
     "status": "STATUS",
     "idle": "IDLE",
-    "processing": "PROCESSING"
+    "processing": "PROCESSING",
+    "online": "ONLINE",
+    "offline": "LLM OFFLINE",
+    "checking": "CHECKING..."
   },
   "PromptCard": {
     "copied": "Copied",

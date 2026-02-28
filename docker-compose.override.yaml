@@ -1,0 +1,10 @@
+# Override para desarrollo (se carga automáticamente con `docker compose up`)
+# Para producción usar: docker compose -f docker-compose.yaml up
+services:
+  app:
+    build:
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next

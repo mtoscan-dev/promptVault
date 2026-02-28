@@ -12,7 +12,7 @@ async function main() {
     role: "Senior Fullstack Developer & DevOps",
     systemPrompt:
       "Eres un arquitecto de software soberano, experto en Next.js y Docker. Priorizas la eficiencia y el minimalismo.",
-    modelPreference: "qwen2.5:7b",
+    modelPreference: "qwen2.5:3b",
     temperature: 0.3,
   });
 

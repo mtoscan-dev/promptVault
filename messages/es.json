@@ -33,6 +33,8 @@
     "v": "v",
     "translate": "Traducir",
     "analyze": "Analizar",
+    "switchingToEnglish": "Cambiando a EN para un análisis más preciso...",
+    "translateBeforeAnalyze": "Traduce al inglés antes de analizar",
     "analyzing": "ANALIZANDO...",
     "score": "PUNTAJE",
     "autoSuggest": "Auto-Sugerir",
@@ -55,10 +57,14 @@
     "aiSuggestions": "Sugerencias IA",
     "applyAll": "Aplicar Todo",
     "autoTagInfo": "Las etiquetas se sugieren automáticamente mientras escribes.",
+    "analysisError": "El análisis falló. Verifica que Ollama esté activo.",
+    "optimizeError": "La optimización falló. Intenta de nuevo.",
     "Evaluation": {
       "totalScore": "Puntuación Total",
       "refinementSuggestions": "Sugerencias de Refinamiento",
       "aiRefinement": "Refinamiento IA",
+      "scoreGood": "El puntaje es sólido. Se recomiendan ajustes manuales.",
+      "processing": "Procesando...",
       "categories": {
         "structure": "Estructura",
         "context": "Contexto",
@@ -75,9 +81,9 @@
       },
       "analyze": {
         "tokenizing": "Tokenizando...",
-        "checking": "Revisando gramática...",
-        "evaluating": "Evaluando claridad...",
-        "scoring": "Calculando puntaje..."
+        "checking": "Razonando estructura...",
+        "evaluating": "Evaluando calidad...",
+        "scoring": "Calculando puntajes..."
       },
       "autoSuggest": {
         "reading": "Leyendo contenido...",
@@ -99,7 +105,10 @@
     "memory": "MEM CTX",
     "status": "ESTADO",
     "idle": "EN ESPERA",
-    "processing": "PROCESANDO"
+    "processing": "PROCESANDO",
+    "online": "EN LÍNEA",
+    "offline": "LLM FUERA DE LÍNEA",
+    "checking": "VERIFICANDO..."
   },
   "PromptCard": {
     "copied": "Copiado",

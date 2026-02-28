@@ -85,6 +85,7 @@ export function PromptEditor({
     null,
   );
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   // Tagging State
   const [selectedTags, setSelectedTags] = useState<SmartTag[]>([]);
@@ -560,8 +561,37 @@ export function PromptEditor({
 
   const handleAnalyze = async () => {
     setAnalysisResult(null);
+    setAnalysisError(null);
+
+    // Determine which content to analyze — always prefer English
+    let contentToAnalyze = content;
+
+    if (viewLanguage === "es") {
+      // Save current ES content to bucket before switching
+      setTitleEs(title);
+      setDescriptionEs(description);
+      setContentEs(content);
+
+      // Check if English content exists
+      const enContent = contentEn;
+      if (!enContent || !enContent.trim()) {
+        console.warn("[Analyze] No English content available");
+        return;
+      }
+
+      // Switch UI to English
+      setTitle(titleEn || "");
+      setDescription(descriptionEn || "");
+      setContent(enContent);
+      setViewLanguage("en");
+      contentToAnalyze = enContent;
+
+      console.log("[Analyze] Auto-switched to EN for analysis");
+    }
 
     const analyzeMessages = [
+      // Show switching message first if we auto-switched
+      ...(viewLanguage === "es" ? [t("switchingToEnglish")] : []),
       t("status.analyze.tokenizing"),
       t("status.analyze.checking"),
       t("status.analyze.evaluating"),
@@ -583,13 +613,16 @@ export function PromptEditor({
             );
           });
 
+          // Always analyze with the resolved English content
           const result = await Promise.race([
-            analyzePromptEnhanced(content, viewLanguage),
+            analyzePromptEnhanced(contentToAnalyze, "en"),
             timeoutPromise,
           ]);
 
           if (result.success && result.data) {
             setAnalysisResult(result.data as AnalysisResult);
+          } else if (!result.success) {
+            setAnalysisError(t("analysisError"));
           }
           return result;
         },
@@ -597,28 +630,90 @@ export function PromptEditor({
       );
     } catch (error) {
       console.error("Analysis Failed", error);
+      setAnalysisError(t("analysisError"));
     }
   };
 
   const handleOptimize = async () => {
-    if (!analysisResult || !analysisResult.prioritySuggestions.length) return;
+    if (!analysisResult || !analysisResult.prioritySuggestions.length) {
+      console.warn("[Optimize] Skipped — no analysisResult or suggestions");
+      return;
+    }
+
+    const previousScore = analysisResult.totalScore;
+    console.log(`[Optimize] Starting — current score: ${previousScore}/75`);
 
     setIsOptimizing(true);
+    setAnalysisError(null);
     try {
       const result = await optimizePromptEnhanced(
         content,
         analysisResult,
+        previousScore,
         viewLanguage,
       );
 
+      console.log("[Optimize] Result:", result);
+
       if (result.success && result.data?.optimizedContent) {
-        setContent(result.data.optimizedContent);
-        await handleAnalyze();
+        const optimizedContent = result.data.optimizedContent;
+        console.log(
+          `[Optimize] Got optimized content (${optimizedContent.length} chars)`,
+        );
+        setContent(optimizedContent);
+        setAnalysisResult(null);
+
+        // Re-analyze using the process wrapper for proper UI + monitor activation
+        const analyzeMessages = [
+          t("status.analyze.tokenizing"),
+          t("status.analyze.checking"),
+          t("status.analyze.evaluating"),
+          t("status.analyze.scoring"),
+        ];
+
+        await analyzeProcess.startProcess(
+          analyzeMessages,
+          async () => {
+            const timeoutPromise = new Promise<{
+              success: boolean;
+              data?: any;
+              error?: string;
+            }>((_, reject) => {
+              setTimeout(
+                () => reject(new Error("Analysis timed out after 120s")),
+                120000,
+              );
+            });
+
+            // Use optimizedContent directly — not the stale closure `content`
+            // Always analyze in English for consistent scoring
+            const reAnalysis = await Promise.race([
+              analyzePromptEnhanced(optimizedContent, "en"),
+              timeoutPromise,
+            ]);
+
+            console.log("[Optimize] Re-analysis result:", reAnalysis);
+
+            if (reAnalysis.success && reAnalysis.data) {
+              setAnalysisResult(reAnalysis.data as AnalysisResult);
+            }
+            return reAnalysis;
+          },
+          { minDuration: 2000 },
+        );
+      } else {
+        console.warn(
+          "[Optimize] Optimization returned no content or failed:",
+          result,
+        );
+        setAnalysisError(t("optimizeError"));
       }
     } catch (error) {
-      console.error("Optimization failed", error);
+      console.error("[Optimize] Error:", error);
+      setAnalysisError(t("optimizeError"));
     } finally {
       setIsOptimizing(false);
+      console.log("[Optimize] Done");
     }
   };
 
@@ -825,9 +920,15 @@ export function PromptEditor({
                     translateProcess={translateProcess}
                     analyzeProcess={analyzeProcess}
                     suggestProcess={suggestProcess}
+                    isOptimizing={isOptimizing}
                     hasContent={!!content.trim()}
                     isTranslated={!!contentEs && !!contentEn && !isUnsynced}
                     hasMetadata={!!title.trim() && !!description.trim()}
+                    analyzeDisabledReason={
+                      viewLanguage === "es" && !contentEn?.trim()
+                        ? t("translateBeforeAnalyze")
+                        : undefined
+                    }
                     className="static transform-none shadow-2xl"
                   />
                 </div>
@@ -986,6 +1087,14 @@ export function PromptEditor({
                   </div>
                 )}
               </div>
+
+              {/* Analysis Error */}
+              {analysisError && !analyzeProcess.isProcessing && (
+                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg animate-in fade-in duration-300">
+                  <RefreshCw size={14} className="text-red-400 shrink-0" />
+                  <span className="text-[11px] font-mono text-red-300">{analysisError}</span>
+                </div>
+              )}
 
               {/* 3. Analysis Card */}
               {analysisResult && !analyzeProcess.isProcessing && (
