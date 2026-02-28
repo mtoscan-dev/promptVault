@@ -12,27 +12,6 @@ const SECTORS = [
     path: "/vault",
     color: "var(--sector-vault, #22c55e)",
   },
-  {
-    id: "02",
-    name: "LOGIC",
-    path: "/logic",
-    color: "var(--sector-logic, #f59e0b)",
-  },
-  {
-    id: "03",
-    name: "PERSONA",
-    path: "/persona",
-    color: "var(--sector-persona, #06b6d4)",
-  },
-  {
-    id: "04",
-    name: "GOVERNANCE",
-    path: "/governance",
-    color: "var(--sector-gov, #d946ef)",
-  },
-  { id: "05", name: "THE FORGE", path: "/forge", color: "#ef4444" },
-  { id: "06", name: "ACTIVITY", path: "/activity", color: "#94a3b8" },
-  { id: "07", name: "ANALYTICS", path: "/analytics", color: "#8b5cf6" },
 ];
 
 export function BunkerHUD() {
@@ -42,7 +21,7 @@ export function BunkerHUD() {
   return (
     <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1">
       {SECTORS.map((sector) => {
-        const isActive = pathname.includes(sector.path);
+        const isActive = pathname === "/" || pathname.includes(sector.path);
 
         return (
           <Link
