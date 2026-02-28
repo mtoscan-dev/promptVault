@@ -32,7 +32,7 @@ import {
   translatePromptFields,
   checkAIGateway,
   getTaxonomy,
-} from "@/app/actions/forge-ai";
+} from "@/app/actions/ai";
 import { detectLanguage } from "@/utils/languageDetection";
 import { useProcessSimulator } from "@/hooks/useProcessSimulator";
 import { PromptToolbar } from "./PromptToolbar";

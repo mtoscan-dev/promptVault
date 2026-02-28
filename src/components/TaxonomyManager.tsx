@@ -28,7 +28,7 @@ import {
   updateDimension,
   deleteDimension,
 } from "@/app/actions/taxonomy";
-import { predictDimension } from "@/app/actions/forge-ai";
+import { predictDimension } from "@/app/actions/ai";
 import { useRouter } from "next/navigation";
 
 interface TaxonomyManagerProps {
