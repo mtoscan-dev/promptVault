@@ -5,7 +5,6 @@ import {
   varchar,
   integer,
   timestamp,
-  doublePrecision,
   jsonb,
   pgEnum,
   customType,
@@ -29,13 +28,6 @@ const vector = customType<{ data: number[]; driverData: string }>({
 
 // Enums
 export const promptTypeEnum = pgEnum("prompt_type", ["standard", "skill"]);
-export const govTypeEnum = pgEnum("gov_type", [
-  "project_rule",
-  "protocol",
-  "behavior",
-  "tool_config",
-]);
-
 // La tabla de dimensiones ahora será una entidad propia para soportar metadatos bilingües
 export const tagDimensions = pgTable("tag_dimensions", {
   id: varchar("id", { length: 50 }).primaryKey(), // e.g. 'tech', 'task', 'industry'
@@ -80,28 +72,6 @@ export const prompts = pgTable("prompts", {
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// Tabla de Personas (Identidades de IA)
-export const personas = pgTable("personas", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull(),
-  role: text("role"),
-  systemPrompt: text("system_prompt").notNull(),
-  temperature: doublePrecision("temperature").default(0.7),
-  modelPreference: varchar("model_preference", { length: 100 }),
-  avatarUrl: text("avatar_url"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-// Tabla de Governance (Reglas)
-export const governance = pgTable("governance", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  type: govTypeEnum("type").notNull(),
-  title: varchar("title", { length: 255 }).notNull(),
-  content: text("content").notNull(), // Markdown
-  fileName: varchar("file_name", { length: 255 }), // e.g. .cursorrules
-  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Tabla de Settings (Singleton - ID 1)
