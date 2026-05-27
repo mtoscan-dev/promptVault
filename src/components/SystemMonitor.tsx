@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { cn } from "@/utils/cn";
 import { useTranslations } from "next-intl";
 import { Cpu, Zap, Radio } from "lucide-react";
-import { getSystemStatus } from "@/app/actions/forge-ai";
+import { getSystemStatus } from "@/app/actions/ai";
 
 interface SystemMonitorProps {
   isActive: boolean;

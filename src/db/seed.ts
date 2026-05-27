@@ -1,24 +1,12 @@
 import { db } from "./index";
-import { personas, prompts, governance } from "./schema";
+import { prompts } from "./schema";
 import { generateEmbedding } from "../lib/vectorize";
-import { sql } from "drizzle-orm"; // Add import
+import { sql } from "drizzle-orm";
 
 async function main() {
-  console.log("🌱 Iniciando siembra del Búnker...");
+  console.log("🌱 Iniciando siembra del Vault...");
 
-  // 1. Seed de Personas
-  await db.insert(personas).values({
-    name: "Patagonia Architect",
-    role: "Senior Fullstack Developer & DevOps",
-    systemPrompt:
-      "Eres un arquitecto de software soberano, experto en Next.js y Docker. Priorizas la eficiencia y el minimalismo.",
-    modelPreference: "qwen2.5:3b",
-    temperature: 0.3,
-  });
-
-  // 2. Seed de Vault Assets (Prompts & Skills)
   const vaultAssets = [
-    // Standard Prompts (Vault Knowledge)
     {
       type: "standard" as const,
       titleEs: "Experto en SQL",
@@ -51,24 +39,6 @@ async function main() {
         temperature_suggestion: 0.8,
       },
     },
-    // Skills (Functional Prompts for Forge)
-    {
-      type: "skill" as const,
-      titleEs: "Optimizador de React",
-      titleEn: "React Optimizer",
-      descriptionEs: "Analiza y optimiza componentes React.",
-      descriptionEn: "Analyzes and optimizes React components.",
-      content:
-        "Analyze the provided React component for performance bottlenecks, re-renders, and memory leaks. Suggest optimizations using React.memo, useMemo, and useCallback...",
-      tags: ["coding", "react", "optimization"],
-      domain: "logic:react",
-      version: 1,
-      metadata: {
-        cli_prefix: "claude-opt",
-        engine: "claude-code",
-        tool_compatibility: ["claude", "cursor"],
-      },
-    },
   ];
 
   for (const asset of vaultAssets) {
@@ -93,7 +63,7 @@ async function main() {
       descriptionEn: asset.descriptionEn,
       content: asset.content,
       tags: asset.tags,
-      domain: asset.domain, // New field
+      domain: asset.domain,
       version: asset.version,
       versions: [
         {
@@ -109,16 +79,7 @@ async function main() {
     console.log(`✅ Asset seeded: ${asset.titleEn}`);
   }
 
-  // 3. Seed de Governance (White Hat)
-  await db.insert(governance).values({
-    type: "protocol",
-    title: "White Hat Marketing Standard",
-    content:
-      "Todas las estrategias de Starflow deben evitar patrones oscuros y priorizar la transparencia del usuario.",
-    fileName: "marketing_ethics.md",
-  });
-
-  console.log("✅ Búnker sembrado con éxito.");
+  console.log("✅ Vault sembrado con éxito.");
   process.exit(0);
 }
 

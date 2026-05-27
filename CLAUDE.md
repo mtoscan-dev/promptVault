@@ -21,54 +21,50 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-Two React contexts: `ForgeContext` (persona/skill/rule selection + LLM inference) and `SettingsContext` (app preferences). Server Actions + Drizzle ORM for persistence. UI orchestrated from `src/components/forge/ForgeWorkspace.tsx`, rendered within `src/app/[locale]/page.tsx`.
+One React context: `SettingsContext` (app preferences). Server Actions + Drizzle ORM for persistence. The root `src/app/[locale]/page.tsx` renders the Vault page directly.
 
 ### Directory Structure
 
 ```
 src/
 ├── app/
-│   ├── [locale]/page.tsx      # Entry point (server-side data fetch)
-│   ├── actions/               # Server actions (forge-ai.ts, taxonomy.ts)
+│   ├── [locale]/page.tsx      # Entry point (renders Vault)
+│   ├── actions/               # Server actions (ai.ts, taxonomy.ts)
 │   └── api/chat/              # Chat API route
 ├── components/
-│   ├── forge/                 # Core workspace (ForgeWorkspace, AssemblyArea, IngredientsPanel, OutputStream, CompilerLab, LiveBlueprint)
 │   ├── terminal/              # Terminal UI (BunkerHUD, BunkerHeader, QuickTerminal, SystemStats)
-│   ├── governance/            # Rule management (GovExplorer)
-│   ├── ui/                    # Reusable cards (PersonaCard, ResultLogCard, SkillCard)
+│   ├── ui/                    # Reusable UI components
 │   ├── PromptEditor.tsx       # Create/edit modal with translation + AI analysis
 │   ├── TerminalSearch.tsx     # Tag autocomplete (space=select, backspace=remove, enter=confirm)
 │   ├── TaxonomyManager.tsx    # Smart tagging taxonomy CRUD
 │   ├── SystemMonitor.tsx      # CPU, Ollama connectivity, model memory
 │   ├── SettingsModal.tsx      # App settings (language, theme, developer mode)
 │   └── ...                    # TagCloud, TagBadge, PromptCard, ThemeToggle, LocaleSwitcher, etc.
-├── contexts/                  # ForgeContext (persona/skill/rule + inference), SettingsContext (preferences)
+├── contexts/                  # SettingsContext (app preferences)
 ├── db/
-│   ├── schema.ts              # Drizzle schema (prompts, tags, tagDimensions, personas, governance, settings, promptTags)
-│   ├── queries/forge.ts       # Database query functions
+│   ├── schema.ts              # Drizzle schema (prompts, tags, tagDimensions, settings, promptTags)
 │   └── seed.ts, seed-tags.ts  # Seed scripts
-├── hooks/                     # use-ollama-stream, useProcessSimulator
+├── hooks/                     # useProcessSimulator
 ├── i18n/                      # next-intl config (routing.ts, request.ts)
 ├── lib/
-│   ├── actions/               # vault.ts, settings.ts, log-activity.ts
+│   ├── actions/               # vault.ts, settings.ts
 │   ├── compiler.ts            # Prompt compilation logic
 │   └── vectorize.ts           # pgvector embedding generation
 ├── types/
-│   ├── index.ts               # Prompt, PromptVersion, Tag, SmartTag, TagDimension, Taxonomy, AnalysisResult
-│   └── forge.ts               # ForgePersona, ForgeSkill, ForgeRule, ForgeInferenceMetrics
+│   └── index.ts               # Prompt, PromptVersion, Tag, SmartTag, TagDimension, Taxonomy, AnalysisResult
 └── utils/                     # classification.ts, styling.ts, cn.ts, languageDetection.ts
 ```
 
 ### Database Schema (PostgreSQL + pgvector)
 
-Key tables: `prompts` (bilingual titles/descriptions, content, versions JSONB, 768-dim embedding vector), `tags` + `tag_dimensions` (multi-dimensional taxonomy), `prompt_tags` (M2M), `personas`, `governance`, `settings` (singleton id=1).
+Key tables: `prompts` (bilingual titles/descriptions, content, versions JSONB, 768-dim embedding vector), `tags` + `tag_dimensions` (multi-dimensional taxonomy), `prompt_tags` (M2M), `settings` (singleton id=1).
 
 All text fields are bilingual (`*_es`, `*_en`). The `tags` array on prompts is a read cache; canonical tag relationships live in `prompt_tags`.
 
 ### Data Flow
 
-1. **Initialization**: Server-side fetch via Drizzle queries in page.tsx
-2. **State**: ForgeContext manages persona/skill/rule selection and LLM inference; SettingsContext handles app preferences
+1. **Initialization**: Root page renders VaultPage client component which fetches data via server actions
+2. **State**: SettingsContext handles app preferences
 3. **Filtering**: AND logic for tags + case-insensitive text search on title/description/content
 4. **Save**: Creates new version entry in JSONB array, auto-tags via AI (Ollama) or keyword fallback
 5. **Smart Tagging**: Ollama classifies prompts against the taxonomy (tag_dimensions + tags)
@@ -117,7 +113,7 @@ Docker uses internal service names (`db`) for networking. Ollama runs on the **h
 - **Immutable versions**: New version created on save, old versions preserved in JSONB array
 - **Smart tagging**: Multi-dimensional taxonomy (tag_dimensions -> tags -> prompt_tags) with AI classification
 - **Ollama via OpenAI compat**: AI SDK connects to Ollama's `/v1` endpoint using `@ai-sdk/openai` provider with `apiKey: "ollama"`
-- **Type safety**: Strict TypeScript; types in `src/types/index.ts` + `src/types/forge.ts`
+- **Type safety**: Strict TypeScript; types in `src/types/index.ts`
 - **Path alias**: `@/*` maps to `src/*`
 - **Client components**: Most components use `'use client'` directive
 - **Terminal aesthetic**: Monospace font, green accent (`green-400`, `green-600`), fixed header/footer layout

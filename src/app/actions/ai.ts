@@ -1,49 +1,24 @@
 "use server";
 
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, generateObject, generateText } from "ai";
+import { generateObject, generateText } from "ai";
 import { z } from "zod";
 const DEFAULT_LLM = "qwen2.5:3b";
 // Create an OpenAI provider instance that points to our local Ollama
 // We use the OpenAI compatibility layer of Ollama
 const ollamaBaseUrl = process.env.OLLAMA_HOST + "/v1";
-console.log("[ForgeAI] Initializing Ollama provider at:", ollamaBaseUrl);
+console.log("[AI] Initializing Ollama provider at:", ollamaBaseUrl);
 
 const ollama = createOpenAI({
   baseURL: ollamaBaseUrl, // e.g. http://host.docker.internal:11434/v1
   apiKey: "ollama", // Ollama doesn't require a key, but the SDK expects one
 });
 
-export async function streamForgeResponse(
-  messages: any[],
-  model: string = process.env.DEFAULT_MODEL || DEFAULT_LLM,
-) {
-  try {
-    // Basic validation
-    if (!messages || !Array.isArray(messages)) {
-      throw new Error("Invalid messages format");
-    }
-
-    // Streaming response
-    console.log(`[ForgeAI] Streaming response using model: ${model}`);
-    const result = await streamText({
-      model: ollama(model),
-      messages,
-      temperature: 0.7,
-    });
-
-    return result.toTextStreamResponse();
-  } catch (error) {
-    console.error("Forge AI Error:", error);
-    throw error;
-  }
-}
-
 export async function translatePromptFields(
   data: { title: string; description: string; content: string },
   targetLang: "es" | "en",
 ) {
-  console.log(`[ForgeAI] Starting translation to ${targetLang}...`);
+  console.log(`[AI] Starting translation to ${targetLang}...`);
   const targetLanguageName = targetLang === "es" ? "Spanish" : "English";
 
   const systemPrompt = `
@@ -69,7 +44,7 @@ export async function translatePromptFields(
 
   try {
     const modelToUse = process.env.DEFAULT_MODEL || DEFAULT_LLM;
-    console.log(`[ForgeAI] Generating object using model: ${modelToUse}`);
+    console.log(`[AI] Generating object using model: ${modelToUse}`);
     const { object } = await generateObject({
       model: ollama(modelToUse),
       schema: z.object({
@@ -99,7 +74,7 @@ export async function translatePromptFields(
       temperature: 0.1,
     });
 
-    console.log("[ForgeAI] Translation complete.");
+    console.log("[AI] Translation complete.");
     return { success: true, data: object };
   } catch (error) {
     console.error("Translation Error:", error);
@@ -130,9 +105,9 @@ export async function generatePromptMetadata(
   `;
 
   try {
-    console.log(`[ForgeAI] Generating metadata (Target: ${language})...`);
+    console.log(`[AI] Generating metadata (Target: ${language})...`);
     const modelToUse = process.env.DEFAULT_MODEL || DEFAULT_LLM;
-    console.log(`[ForgeAI] Metadata generation using model: ${modelToUse}`);
+    console.log(`[AI] Metadata generation using model: ${modelToUse}`);
     const isSpanish =
       language === "es" || (isAuto && content.match(/[áéíóúñ¿¡]/i));
 
@@ -156,7 +131,7 @@ export async function generatePromptMetadata(
       ],
       temperature: 0.3,
     });
-    console.log("[ForgeAI] Metadata generation complete.");
+    console.log("[AI] Metadata generation complete.");
 
     return { success: true, data: object };
   } catch (error) {
@@ -176,7 +151,7 @@ export async function analyzePromptEnhanced(
     const modelToUse =
       process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || DEFAULT_LLM;
     console.log(
-      `[ForgeAI] Enhanced Analysis (2-pass) using model: ${modelToUse}`,
+      `[AI] Enhanced Analysis (2-pass) using model: ${modelToUse}`,
     );
 
     // --- Pass 1: Free-form reasoning (model thinks better in plain text) ---
@@ -201,7 +176,7 @@ Write your analysis in ${langName}.`;
     });
 
     console.log(
-      "[ForgeAI] Pass 1 (reasoning) complete:",
+      "[AI] Pass 1 (reasoning) complete:",
       reasoning.length,
       "chars",
     );
@@ -270,7 +245,7 @@ ${reasoning}`;
       temperature: 0,
     });
 
-    console.log("[ForgeAI] Pass 2 (scoring) complete — raw ratings:", {
+    console.log("[AI] Pass 2 (scoring) complete — raw ratings:", {
       structure: rawScores.categories.structure.rating,
       context: rawScores.categories.context.rating,
       quality: rawScores.categories.quality.rating,
@@ -313,7 +288,7 @@ ${reasoning}`;
 
     const correctedData = { ...object, totalScore: computedTotal };
 
-    console.log("[ForgeAI] Enhanced Analysis complete:", correctedData);
+    console.log("[AI] Enhanced Analysis complete:", correctedData);
     return { success: true, data: correctedData };
   } catch (error) {
     console.error("Enhanced Analysis Error:", error);
@@ -377,7 +352,7 @@ Rules:
     const modelToUse =
       process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || DEFAULT_LLM;
     console.log(
-      `[ForgeAI] Enhanced Optimization with generateText (score: ${previousScore}/75)...`,
+      `[AI] Enhanced Optimization with generateText (score: ${previousScore}/75)...`,
     );
 
     // Truncate very long input to prevent timeouts and score=0 on re-analysis
@@ -428,18 +403,18 @@ Rules:
 
     // Guard: empty output
     if (!optimizedContent || optimizedContent.length < 10) {
-      console.warn("[ForgeAI] Optimizer returned empty/too-short output");
+      console.warn("[AI] Optimizer returned empty/too-short output");
       return { success: false, error: "Optimization produced invalid output." };
     }
 
     // Guard: identical content (model echoed input)
     if (optimizedContent.toLowerCase() === content.trim().toLowerCase()) {
-      console.warn("[ForgeAI] Optimizer returned identical content — skipping");
+      console.warn("[AI] Optimizer returned identical content — skipping");
       return { success: false, error: "Optimization produced no changes." };
     }
 
     console.log(
-      `[ForgeAI] Optimization complete: ${content.length} → ${optimizedContent.length} chars`,
+      `[AI] Optimization complete: ${content.length} → ${optimizedContent.length} chars`,
     );
     return { success: true, data: { optimizedContent } };
   } catch (error) {
@@ -454,7 +429,7 @@ import { SmartTag } from "@/types";
 
 export async function suggestSmartTags(content: string, locale: string = "en") {
   const modelToUse = process.env.DEFAULT_MODEL || DEFAULT_LLM;
-  console.log(`[ForgeAI] Suggesting smart tags using model: ${modelToUse}...`);
+  console.log(`[AI] Suggesting smart tags using model: ${modelToUse}...`);
 
   try {
     const isSpanish = locale === "es";
@@ -506,14 +481,14 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
       temperature: 0.1, // Low temp for precision
     });
 
-    console.log("[ForgeAI] Suggested Tag IDs (raw):", object.tagIds);
+    console.log("[AI] Suggested Tag IDs (raw):", object.tagIds);
 
     // 3. Hydrate tags from DB records
     // Strip brackets/quotes the LLM may wrap around slugs (e.g. "[coding]" → "coding")
     const cleanedIds = object.tagIds.map((id) =>
       id.replace(/[\[\]"']/g, "").trim(),
     );
-    console.log("[ForgeAI] Suggested Tag IDs (cleaned):", cleanedIds);
+    console.log("[AI] Suggested Tag IDs (cleaned):", cleanedIds);
 
     // We map the DB 'slug' to the 'id' field expected by the UI/SmartTag interface
     const hydratedTags = cleanedIds
@@ -538,7 +513,7 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
 export async function checkAIGateway() {
   try {
     const model = process.env.DEFAULT_MODEL || DEFAULT_LLM;
-    console.log(`[ForgeAI] Checking health with model: ${model}`);
+    console.log(`[AI] Checking health with model: ${model}`);
 
     // Simple fast check
     const { text } = await generateText({
@@ -548,7 +523,7 @@ export async function checkAIGateway() {
 
     return { success: true, model, status: text };
   } catch (error: any) {
-    console.error(`[ForgeAI] Health Check Failed: ${error.message}`);
+    console.error(`[AI] Health Check Failed: ${error.message}`);
     const host = process.env.OLLAMA_HOST || "unknown";
     return {
       success: false,
