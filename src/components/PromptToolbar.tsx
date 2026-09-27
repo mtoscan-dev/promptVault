@@ -1,16 +1,19 @@
 import { useRef, useEffect } from "react";
-import { Languages, BarChart2, Sparkles } from "lucide-react";
+import { Languages, BarChart2, Sparkles, type LucideIcon } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { useTranslations } from "next-intl";
 import { SystemMonitor } from "./SystemMonitor";
+import type { useProcessSimulator } from "@/hooks/useProcessSimulator";
+
+type ProcessSimulator = ReturnType<typeof useProcessSimulator>;
 
 interface PromptToolbarProps {
   onTranslate: () => void;
   onAnalyze: () => void;
   onAutoSuggest: () => void;
-  translateProcess: any;
-  analyzeProcess: any;
-  suggestProcess: any;
+  translateProcess: ProcessSimulator;
+  analyzeProcess: ProcessSimulator;
+  suggestProcess: ProcessSimulator;
   isOptimizing?: boolean;
   hasContent: boolean;
   isTranslated?: boolean;
@@ -39,7 +42,7 @@ export function PromptToolbar({
     translateProcess.isProcessing ||
     analyzeProcess.isProcessing ||
     suggestProcess.isProcessing ||
-    isOptimizing;
+    !!isOptimizing;
 
   const currentStatusMessage =
     (translateProcess.isProcessing && translateProcess.currentMessage) ||
@@ -123,7 +126,7 @@ interface ToolbarButtonProps {
   onClick: () => void;
   disabled?: boolean;
   isActive?: boolean;
-  icon: any;
+  icon: LucideIcon;
   title: string;
   color: "blue" | "purple" | "yellow";
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Monitor, Sliders, Cpu, Save } from "lucide-react";
+import { X, Monitor, Sliders, Cpu, Save, type LucideIcon } from "lucide-react";
 import { createPortal } from "react-dom";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings, type ExportLanguage } from "@/contexts/SettingsContext";
 import { useTranslations } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/routing";
 
@@ -151,7 +151,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   >
                     <select
                       value={exportLanguage}
-                      onChange={(e) => setExportLanguage(e.target.value as any)}
+                      onChange={(e) => setExportLanguage(e.target.value as ExportLanguage)}
                       className="bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:border-(--acc-primary) outline-none transition-colors"
                     >
                       <option value="original">{t("options.original")}</option>
@@ -280,7 +280,7 @@ function TabButton({
 }: {
   id: TabId;
   label: string;
-  icon: any;
+  icon: LucideIcon;
   isActive: boolean;
   onClick: () => void;
 }) {

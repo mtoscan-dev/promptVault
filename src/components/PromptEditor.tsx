@@ -177,7 +177,7 @@ export function PromptEditor({
           // Timeout Promise (120s)
           const timeoutPromise = new Promise<{
             success: boolean;
-            data?: any;
+            data?: Awaited<ReturnType<typeof generatePromptMetadata>>["data"];
             error?: string;
           }>((_, reject) => {
             setTimeout(
@@ -463,9 +463,11 @@ export function PromptEditor({
 
   const handleTranslate = async () => {
     const isEsView = viewLanguage === "es";
-    let targetLang: "es" | "en" = isEsView ? "en" : "es";
+    const targetLang: "es" | "en" = isEsView ? "en" : "es";
 
-    const fieldsToTranslate: any = {};
+    const fieldsToTranslate: Partial<
+      Parameters<typeof translatePromptFields>[0]
+    > = {};
     const targetBucket = isEsView
       ? { t: titleEn, d: descriptionEn, c: contentEn }
       : { t: titleEs, d: descriptionEs, c: contentEs };
@@ -490,7 +492,7 @@ export function PromptEditor({
         async () => {
           const timeoutPromise = new Promise<{
             success: boolean;
-            data?: any;
+            data?: Awaited<ReturnType<typeof translatePromptFields>>["data"];
             error?: string;
           }>((_, reject) => {
             setTimeout(
@@ -604,7 +606,7 @@ export function PromptEditor({
         async () => {
           const timeoutPromise = new Promise<{
             success: boolean;
-            data?: any;
+            data?: Awaited<ReturnType<typeof analyzePromptEnhanced>>["data"];
             error?: string;
           }>((_, reject) => {
             setTimeout(
@@ -676,7 +678,7 @@ export function PromptEditor({
           async () => {
             const timeoutPromise = new Promise<{
               success: boolean;
-              data?: any;
+              data?: Awaited<ReturnType<typeof analyzePromptEnhanced>>["data"];
               error?: string;
             }>((_, reject) => {
               setTimeout(

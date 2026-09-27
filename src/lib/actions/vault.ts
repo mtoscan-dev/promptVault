@@ -84,7 +84,7 @@ export async function savePrompt(data: {
   contentEn?: string | null;
   tags: string[];
   domain?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }) {
   try {
     console.log("!!! SAVE_PROMPT START !!!");
@@ -135,7 +135,7 @@ export async function savePrompt(data: {
       if (!existing) throw new Error("Prompt not found");
 
       // Cast versions to a mutable array or default to empty
-      const history = (existing.versions as any[]) || [];
+      const history = (existing.versions as unknown[]) || [];
       const newVersion = (existing.version || 0) + 1;
 
       history.push({
@@ -189,7 +189,12 @@ export async function deletePrompt(id: string) {
 }
 
 // Helper to map DB result to UI type
-function mapDbPromptsToType(dbPrompts: any[]): Prompt[] {
+type PromptRow = typeof prompts.$inferSelect;
+
+function mapDbPromptsToType(
+  dbPrompts: (Omit<PromptRow, "type" | "contentEs" | "contentEn" | "embedding"> &
+    Partial<Pick<PromptRow, "contentEs" | "contentEn">>)[],
+): Prompt[] {
   return dbPrompts.map((p) => ({
     id: p.id,
     title: p.titleEn, // Defaulting to English title for UI for now, or we could pass locale
@@ -197,7 +202,7 @@ function mapDbPromptsToType(dbPrompts: any[]): Prompt[] {
     tags: p.tags,
     domain: p.domain,
     metadata: p.metadata,
-    versions: p.versions,
+    versions: p.versions as Prompt["versions"],
     currentVersionId: p.id, // Using prompt ID as current version ID for simplicity in UI matching
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
