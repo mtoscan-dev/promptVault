@@ -45,6 +45,8 @@ export function TerminalSearch({
           tag.name.toLowerCase().startsWith(lastWord) &&
           !selectedTags.includes(tag.name),
       );
+      // Suggestions are also cleared imperatively (tag select), so they stay as state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuggestions(matching.slice(0, 5));
       setSelectedSuggestion(0);
     } else {

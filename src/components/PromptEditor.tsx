@@ -177,7 +177,7 @@ export function PromptEditor({
           // Timeout Promise (120s)
           const timeoutPromise = new Promise<{
             success: boolean;
-            data?: any;
+            data?: Awaited<ReturnType<typeof generatePromptMetadata>>["data"];
             error?: string;
           }>((_, reject) => {
             setTimeout(
@@ -231,6 +231,8 @@ export function PromptEditor({
       let activeContent = currentVersion?.content || "";
 
       // Initialize bucket state
+      // Resets editor state when the edited prompt (or the async-loaded taxonomy) changes.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setContentEs(esContent);
       setContentEn(enContent);
       setTitleEs(esTitle);
@@ -323,6 +325,38 @@ export function PromptEditor({
     return () => clearTimeout(handler);
   }, [content, viewLanguage]);
 
+  const handleAutoTag = async () => {
+    if (!content.trim()) return;
+    setSuggestedTags([]);
+
+    const tagMessages = [
+      t("status.tagging.analyzing"),
+      t("status.tagging.referencing"),
+      t("status.tagging.categorizing"),
+      t("status.tagging.validating"),
+    ];
+
+    try {
+      await tagProcess.startProcess(
+        tagMessages,
+        async () => {
+          const result = await suggestSmartTags(content, viewLanguage);
+          if (result.success && Array.isArray(result.data)) {
+            const newSuggestions = result.data.filter(
+              (suggested: SmartTag) =>
+                !selectedTags.some((s) => s.id === suggested.id),
+            );
+            setSuggestedTags(newSuggestions);
+          }
+          return result;
+        },
+        { minDuration: 1500 },
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   // Auto-Tag on Content Change
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -357,38 +391,6 @@ export function PromptEditor({
 
     return () => clearTimeout(handler);
   }, [content, prompt, selectedTags.length, viewLanguage]);
-
-  const handleAutoTag = async () => {
-    if (!content.trim()) return;
-    setSuggestedTags([]);
-
-    const tagMessages = [
-      t("status.tagging.analyzing"),
-      t("status.tagging.referencing"),
-      t("status.tagging.categorizing"),
-      t("status.tagging.validating"),
-    ];
-
-    try {
-      await tagProcess.startProcess(
-        tagMessages,
-        async () => {
-          const result = await suggestSmartTags(content, viewLanguage);
-          if (result.success && Array.isArray(result.data)) {
-            const newSuggestions = result.data.filter(
-              (suggested: SmartTag) =>
-                !selectedTags.some((s) => s.id === suggested.id),
-            );
-            setSuggestedTags(newSuggestions);
-          }
-          return result;
-        },
-        { minDuration: 1500 },
-      );
-    } catch (error) {
-      console.error(error);
-    }
-  };
 
   const toggleTag = (tag: SmartTag) => {
     setSelectedTags((prev) =>
@@ -463,9 +465,11 @@ export function PromptEditor({
 
   const handleTranslate = async () => {
     const isEsView = viewLanguage === "es";
-    let targetLang: "es" | "en" = isEsView ? "en" : "es";
+    const targetLang: "es" | "en" = isEsView ? "en" : "es";
 
-    const fieldsToTranslate: any = {};
+    const fieldsToTranslate: Partial<
+      Parameters<typeof translatePromptFields>[0]
+    > = {};
     const targetBucket = isEsView
       ? { t: titleEn, d: descriptionEn, c: contentEn }
       : { t: titleEs, d: descriptionEs, c: contentEs };
@@ -490,7 +494,7 @@ export function PromptEditor({
         async () => {
           const timeoutPromise = new Promise<{
             success: boolean;
-            data?: any;
+            data?: Awaited<ReturnType<typeof translatePromptFields>>["data"];
             error?: string;
           }>((_, reject) => {
             setTimeout(
@@ -604,7 +608,7 @@ export function PromptEditor({
         async () => {
           const timeoutPromise = new Promise<{
             success: boolean;
-            data?: any;
+            data?: Awaited<ReturnType<typeof analyzePromptEnhanced>>["data"];
             error?: string;
           }>((_, reject) => {
             setTimeout(
@@ -676,7 +680,7 @@ export function PromptEditor({
           async () => {
             const timeoutPromise = new Promise<{
               success: boolean;
-              data?: any;
+              data?: Awaited<ReturnType<typeof analyzePromptEnhanced>>["data"];
               error?: string;
             }>((_, reject) => {
               setTimeout(
@@ -727,7 +731,7 @@ export function PromptEditor({
     : title.trim() !== "" || content.trim() !== "";
 
   // Compact Language Switcher
-  const LanguageSwitcher = () => (
+  const languageSwitcher = (
     <div className="flex items-center bg-black/5 dark:bg-black/40 border border-black/5 dark:border-white/10 rounded-lg p-1 ml-2 sm:ml-4 gap-1">
       <button
         onClick={() => handleLanguageSwitch("en")}
@@ -787,7 +791,7 @@ export function PromptEditor({
               {isNewPrompt ? "$ new_prompt" : "$ edit_prompt"}
             </span>
 
-            <LanguageSwitcher />
+            {languageSwitcher}
 
             {/* Unsynced Warning */}
             {isUnsynced && contentEs && contentEn && (

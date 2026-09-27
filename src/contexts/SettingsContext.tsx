@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
 import { updateSetting } from "@/lib/actions/settings";
+import type { getSettings } from "@/lib/actions/settings";
 
 export type ExportLanguage = "original" | "en" | "es" | "fr" | "de" | "ja";
 
@@ -27,13 +28,13 @@ export function SettingsProvider({
   initialSettings,
 }: {
   children: React.ReactNode;
-  initialSettings?: any;
+  initialSettings?: Awaited<ReturnType<typeof getSettings>>;
 }) {
   const [exportLanguage, setExportLanguageState] = useState<ExportLanguage>(
-    initialSettings?.exportLanguage || "original",
+    (initialSettings?.exportLanguage as ExportLanguage) || "original",
   );
   const [language, setLanguageState] = useState<"en" | "es">(
-    initialSettings?.language || "en",
+    (initialSettings?.language as "en" | "es") || "en",
   );
   const [notifications, setNotifications] = useState<boolean>(
     initialSettings?.notifications ?? true,
@@ -44,12 +45,6 @@ export function SettingsProvider({
   const [theme, setTheme] = useState<string>(
     initialSettings?.theme || "system",
   );
-
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const setLanguage = async (lang: "en" | "es") => {
     setLanguageState(lang);

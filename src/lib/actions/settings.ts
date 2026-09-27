@@ -9,7 +9,7 @@ import { revalidatePath } from "next/cache";
  * Updates a specific setting in the singleton settings row (ID: 1).
  * Uses upsert logic to ensure the row exists.
  */
-export async function updateSetting(key: string, value: any) {
+export async function updateSetting(key: string, value: string | boolean) {
   try {
     // We enforce ID=1 for the singleton settings row
     await db
