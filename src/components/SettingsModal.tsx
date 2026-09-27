@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
 import { X, Monitor, Sliders, Cpu, Save, type LucideIcon } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useSettings, type ExportLanguage } from "@/contexts/SettingsContext";
@@ -14,9 +14,16 @@ interface SettingsModalProps {
 
 type TabId = "general" | "appearance" | "system";
 
+const subscribeNoop = () => () => {};
+
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<TabId>("general");
-  const [mounted, setMounted] = useState(false);
+  // true on the client, false during SSR (portal target only exists client-side)
+  const mounted = useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
 
   // Use Context for Global State & Persistence
   const {
@@ -35,7 +42,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const t = useTranslations("Settings");
 
   useEffect(() => {
-    setMounted(true);
     // Lock scroll when modal is open
     if (isOpen) {
       document.body.style.overflow = "hidden";

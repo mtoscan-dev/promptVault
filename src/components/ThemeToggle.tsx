@@ -17,6 +17,8 @@ export function ThemeToggle() {
       : "light";
 
     const initialTheme = savedTheme || systemTheme;
+    // Reads localStorage/matchMedia after mount to avoid SSR hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(initialTheme);
 
     if (initialTheme === "dark") {
