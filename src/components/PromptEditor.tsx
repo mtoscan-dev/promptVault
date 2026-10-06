@@ -313,8 +313,10 @@ export function PromptEditor({
   useEffect(() => {
     const handler = setTimeout(() => {
       if (!content.trim()) return;
-
-      const detected = detectLanguage(content);
+      
+      // For large texts, only analyze first 2000 characters for performance
+      const contentToAnalyze = content.length > 2000 ? content.substring(0, 2000) : content;
+      const detected = detectLanguage(contentToAnalyze);
       if (detected && detected !== viewLanguage) {
         setViewLanguage(detected);
       }
@@ -326,7 +328,8 @@ export function PromptEditor({
   // Auto-Tag on Content Change
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (!content.trim() || content.length < 50) return;
+      // Skip auto-tagging for very large texts (>10000 chars) to prevent hanging
+      if (!content.trim() || content.length < 50 || content.length > 10000) return;
 
       // Prevent auto-tagging if:
       // 1. We have tags assigned.
@@ -347,7 +350,12 @@ export function PromptEditor({
         // If content matches the original (persisted) version, skip auto-tagging
         // But be careful: if originalContent is null, we can't compare.
         // We only skip if content === originalContent.
-        if (content === originalContent) {
+        // For large texts, do a length check first to avoid expensive string comparison
+        if (content.length > 5000) {
+          if (originalContent && content.length === originalContent.length && content === originalContent) {
+            return;
+          }
+        } else if (content === originalContent) {
           return;
         }
       }
@@ -373,7 +381,9 @@ export function PromptEditor({
       await tagProcess.startProcess(
         tagMessages,
         async () => {
-          const result = await suggestSmartTags(content, viewLanguage);
+          // For large texts, only send first 5000 characters to avoid hanging
+          const contentToSend = content.length > 5000 ? content.substring(0, 5000) : content;
+          const result = await suggestSmartTags(contentToSend, viewLanguage);
           if (result.success && Array.isArray(result.data)) {
             const newSuggestions = result.data.filter(
               (suggested: SmartTag) =>
@@ -383,7 +393,7 @@ export function PromptEditor({
           }
           return result;
         },
-        { minDuration: 1500 },
+        { minDuration: content.length > 5000 ? 500 : 1500 }, // Reduce artificial delay for large texts
       );
     } catch (error) {
       console.error(error);
@@ -447,12 +457,28 @@ export function PromptEditor({
 
   const isUnsynced = (() => {
     if (viewLanguage === "es") {
+      // For large texts, do a quick length check first to avoid expensive string comparison
+      if (content.length > 5000) {
+        const lengthModified = 
+          title.length !== (titleEs?.length || 0) ||
+          description.length !== (descriptionEs?.length || 0) ||
+          content.length !== (contentEs?.length || 0);
+        if (!lengthModified) return false; // Early return if lengths match
+      }
       const modified =
         title !== titleEs ||
         description !== descriptionEs ||
         content !== contentEs;
       return modified;
     } else {
+      // For large texts, do a quick length check first to avoid expensive string comparison
+      if (content.length > 5000) {
+        const lengthModified = 
+          title.length !== (titleEn?.length || 0) ||
+          description.length !== (descriptionEn?.length || 0) ||
+          content.length !== (contentEn?.length || 0);
+        if (!lengthModified) return false; // Early return if lengths match
+      }
       const modified =
         title !== titleEn ||
         description !== descriptionEn ||
