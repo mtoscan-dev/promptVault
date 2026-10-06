@@ -1,7 +1,7 @@
 ## Fase 1: Estructura Global y Navegación (Layout)
 
 - [ ] **Rediseñar SideMenubar de Sectores:** Implementar un menú c numeración de sectores: [01] VAULT, [02] LOGIC, [03] PERSONA, [04] GOVERNANCE.
-- [ ] **Header Técnico:** Que el header tenga el componente SystemStats (indicador de RAM y estado de Ollama) en la esquina superior derecha.
+- [ ] **Header Técnico:** Que el header tenga el componente SystemStats (indicador de RAM y estado de freeLLMAPI) en la esquina superior derecha.
 
 ## Fase 2: Especialización de Sectores (Vistas)
 
@@ -40,7 +40,7 @@ Dividiremos el Sidebar en dos grandes bloques: **Biblioteca** (donde vive el con
 | --- OPERACIONES --- |        |                                                                         |
 | [05] THE FORGE      | Fase 3 | El Compilador. Aquí es donde montas el prompt y lo ejecutas.            |
 | [06] ACTIVITY       | Fase 4 | Logs e Historial. El feed de todo lo que has generado y su rendimiento. |
-| [07] ANALYTICS      | Fase 4 | Métricas. Gráficos de velocidad (TPS) y uso de RAM de Ollama.           |
+| [07] ANALYTICS      | Fase 4 | Métricas. Gráficos de velocidad (TPS) y uso de RAM de freeLLMAPI.           |
 
 ## La seccion Governance tendria una organizacion especifica:
 

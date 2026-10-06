@@ -125,7 +125,7 @@ export const ForgeWorkspace = () => {
         </div>
 
         <div className="flex-1 p-6 text-emerald-500/90 leading-relaxed overflow-y-auto custom-scrollbar italic font-serif">
-          {/* Aquí se renderizará el streaming de Ollama */}
+          {/* Aquí se renderizará el streaming de freeLLMAPI */}
           {"> Waiting for operation..."}
         </div>
 
