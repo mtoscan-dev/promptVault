@@ -14,7 +14,7 @@ Aquí es donde seleccionas las piezas que has guardado en los otros sectores del
    \* _Tip:_ Usa colores sutiles para diferenciar qué parte viene de la Persona (Cian), qué parte de la Skill (Ámbar) y qué parte de las reglas (Magenta).  
   **3. Terminal de Salida (Derecha)**  
   Aquí es donde el compilador "escupe" el resultado:
-- **Streaming de Ollama:** Un área negra de terminal donde el texto aparece mediante streaming.
+- **Streaming de freeLLMAPI:** Un área negra de terminal donde el texto aparece mediante streaming.
 - **Métricas de Inferencia:** Debajo del texto, pequeños indicadores de _Tokens por segundo_ (TPS) y _Tiempo de Generación_, para que sepas exactamente cuánto esfuerzo le costó a tu hardware local.
 
 ## El "Bunker Mode" (Tu HUD interactivo)
@@ -25,7 +25,7 @@ Dado que ya tienes el HUD con la RAM y el CPU arriba, **The Forge** debe ser la 
 ## Estado de la UI según tu imagen
 
 - **FORGE_MODE: COOLING** es un gran detalle estético. Podrías hacer que cambie a **FORGE_MODE: HEATING** o **PROCESSING** cuando la IA esté trabajando.
-- **COMPILER: IDLE** cambiaría a **COMPILER: STREAMING** cuando recibas los datos de Ollama.
+- **COMPILER: IDLE** cambiaría a **COMPILER: STREAMING** cuando recibas los datos de freeLLMAPI.
 
 ## Idea de implementacion del workspace de la seccion Forge
 

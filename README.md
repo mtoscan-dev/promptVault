@@ -50,7 +50,7 @@ $$Prompt_{final} = Persona + Governance + Skill + Context_{User}$$
 
 ### 2. Telemetry Streaming
 
-Direct connection to Ollama via `ReadableStream`, allowing for instantaneous visual feedback (typewriter effect) without saturating RAM.
+Direct connection to freeLLMAPI via `ReadableStream`, allowing for instantaneous visual feedback (typewriter effect) without saturating RAM.
 
 ### 3. Bilingual Vector Search (i18n)
 
