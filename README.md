@@ -19,7 +19,7 @@
 - **Framework:** Next.js 14 (App Router) + React.
 - **Database:** PostgreSQL with `pgvector` extension for semantic search.
 - **ORM:** Drizzle ORM.
-- **AI Engine:** Ollama (Host Mode) with Qwen 2.5 (1.5B/7B) for GPU acceleration.
+- **AI Engine:** freeLLMAPI con Qwen 2.5 (1.5B/7B) para aceleración GPU.
 - **Styling:** Tailwind CSS with a Terminal/Neon aesthetic.
 - **Package Management:** pnpm (Optimized disk space and RAM usage).
 
@@ -68,21 +68,20 @@ $$\text{Performance} = \frac{\text{Generated Tokens}}{\text{Response Time (s)}}$
 ### Prerequisites
 
 - **Docker Desktop** installed and running.
-- **Ollama** installed on your host machine (Mac/Windows/Linux).
+- **freeLLMAPI** instalado y ejecutándose en tu máquina host (Mac/Windows/Linux).
 - **Node.js 20+** and **pnpm** (if running locally without Docker).
 
-### AI Setup (Host Mode)
+### AI Setup (freeLLMAPI)
 
-To enable GPU acceleration (Metal), this project uses your host's Ollama instance.
+Este proyecto utiliza freeLLMAPI como motor de IA local.
 
-1.  **Install Ollama:** [Download here](https://ollama.com).
-2.  **Pull the Model:**
-    ```bash
-    ollama pull qwen2.5:1.5b
-    # Or for more power (if you have >16GB RAM):
-    ollama pull qwen2.5:7b
-    ```
-3.  **Ensure Ollama is running:** It should be accessible at `http://localhost:11434`.
+1.  **Instalar freeLLMAPI:** Descargar e instalar desde el dashboard.
+2.  **Configurar Modelo:**
+    Accede al dashboard de freeLLMAPI (http://localhost:3001) para cargar modelos.
+3.  **Obtener Clave API:**
+    Genera una clave API válida desde el dashboard de freeLLMAPI y configúrala en `.env` como `LLM_API_KEY`.
+4.  **Verificar Conectividad:**
+    freeLLMAPI debe ser accesible en `http://localhost:3001`.
 
 ### Project Setup
 
@@ -124,7 +123,7 @@ To enable GPU acceleration (Metal), this project uses your host's Ollama instanc
 
 ## 🛡️ Security Protocols
 
-- **Local-First:** All AI traffic is routed to `localhost:11434`.
+- **Local-First:** Todo el tráfico de IA se enruta a `localhost:3001`.
 - **Data Integrity:** Automatic vector database backups in the `init-db` folder.
 - **Privacy:** No external trackers or cloud analytics are used.
 
