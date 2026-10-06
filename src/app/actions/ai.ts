@@ -3,19 +3,26 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateObject, generateText } from "ai";
 import { z } from "zod";
-const DEFAULT_LLM = "qwen2.5:3b";
-// Create an OpenAI provider instance that points to our local Ollama
-// We use the OpenAI compatibility layer of Ollama
-const ollamaBaseUrl = process.env.OLLAMA_HOST + "/v1";
-console.log("[AI] Initializing Ollama provider at:", ollamaBaseUrl);
+// Fast tasks (metadata, tags, translation) vs. heavier analysis/optimization.
+const DEFAULT_LLM = "auto";
+const ANALYSIS_LLM = "auto";
+// Create an OpenAI provider instance that points directly at freeLLMAPI's
+// OpenAI-compatible API (local Docker container or remote).
+const llmBaseUrl = process.env.LLM_BASE_URL || "http://127.0.0.1:3001/v1";
+console.log("[AI] Initializing LLM provider at:", llmBaseUrl);
 
-const ollama = createOpenAI({
-  baseURL: ollamaBaseUrl, // e.g. http://host.docker.internal:11434/v1
-  apiKey: "ollama", // Ollama doesn't require a key, but the SDK expects one
+const llmProvider = createOpenAI({
+  baseURL: llmBaseUrl, // e.g. http://host.docker.internal:3001/v1
+  apiKey: process.env.LLM_API_KEY || "freeapi", // freeLLMAPI requires a valid key, fallback for testing
 });
 
+// IMPORTANT: always call llmProvider.chat(modelId), never llmProvider(modelId) directly.
+// The bare call defaults to OpenAI's Responses API (/v1/responses), which freeLLMAPI accepts
+// but doesn't honor for structured output — generateObject calls silently get back prose
+// instead of JSON and fail to parse. Chat Completions (/v1/chat/completions) works correctly.
+
 export async function translatePromptFields(
-  data: { title?: string; description?: string; content?: string },
+  data: { title: string; description: string; content: string },
   targetLang: "es" | "en",
 ) {
   console.log(`[AI] Starting translation to ${targetLang}...`);
@@ -46,7 +53,7 @@ export async function translatePromptFields(
     const modelToUse = process.env.DEFAULT_MODEL || DEFAULT_LLM;
     console.log(`[AI] Generating object using model: ${modelToUse}`);
     const { object } = await generateObject({
-      model: ollama(modelToUse),
+      model: llmProvider.chat(modelToUse),
       schema: z.object({
         title: z
           .string()
@@ -72,6 +79,7 @@ export async function translatePromptFields(
         },
       ],
       temperature: 0.1,
+      providerOptions: { openai: { reasoningEffort: "low" } },
     });
 
     console.log("[AI] Translation complete.");
@@ -120,7 +128,7 @@ export async function generatePromptMetadata(
       : "Concise description of the prompt's utility (max 15 words).";
 
     const { object } = await generateObject({
-      model: ollama(modelToUse),
+      model: llmProvider.chat(modelToUse),
       schema: z.object({
         title: z.string().describe(titleAudit),
         description: z.string().describe(descAudit),
@@ -130,6 +138,7 @@ export async function generatePromptMetadata(
         { role: "user", content },
       ],
       temperature: 0.3,
+      providerOptions: { openai: { reasoningEffort: "low" } },
     });
     console.log("[AI] Metadata generation complete.");
 
@@ -140,6 +149,9 @@ export async function generatePromptMetadata(
   }
 }
 
+// Category ranges the UI renders against (PromptEvaluationResults.tsx SCORE_MAX).
+const CATEGORY_MAX = { structure: 16, context: 16, quality: 16, viability: 12 } as const;
+
 export async function analyzePromptEnhanced(
   content: string,
   language: string = "en",
@@ -148,62 +160,26 @@ export async function analyzePromptEnhanced(
   const langName = isSpanish ? "Spanish" : "English";
 
   try {
-    const modelToUse =
-      process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || DEFAULT_LLM;
-    console.log(
-      `[AI] Enhanced Analysis (2-pass) using model: ${modelToUse}`,
-    );
+    const modelToUse = process.env.ANALYSIS_MODEL || ANALYSIS_LLM;
+    console.log(`[AI] Enhanced Analysis using model: ${modelToUse}`);
 
-    // --- Pass 1: Free-form reasoning (model thinks better in plain text) ---
-    const reasoningPrompt = `You are a prompt engineering expert. Analyze the following prompt thoroughly.
+    const systemPrompt = `You are a prompt engineering expert. Analyze the following prompt thoroughly and score it directly against these 4 categories:
 
-Evaluate these 4 categories. For each, list what's present and what's missing:
+A. Structure & Clarity (0-${CATEGORY_MAX.structure}): Is the request clear and unambiguous? Are instructions logically ordered? Is formatting used? Is detail level appropriate?
+B. Context & Purpose (0-${CATEGORY_MAX.context}): Is background info provided? Is the goal stated? Is there a role/persona? Is the audience defined?
+C. Instruction Quality (0-${CATEGORY_MAX.quality}): Is output format specified? Does it encourage step-by-step reasoning? Are instructions consistent? Are examples provided?
+D. Viability (0-${CATEGORY_MAX.viability}): Can it be easily refined? Is it suited for the target model? Are constraints realistic?
 
-A. Structure & Clarity: Is the request clear and unambiguous? Are instructions logically ordered? Is formatting used? Is detail level appropriate?
-B. Context & Purpose: Is background info provided? Is the goal stated? Is there a role/persona? Is the audience defined?
-C. Instruction Quality: Is output format specified? Does it encourage step-by-step reasoning? Are instructions consistent? Are examples provided?
-D. Viability: Can it be easily refined? Is it suited for the target model? Are constraints realistic?
-
-For each category, note specific strengths and weaknesses. Then list the top 3 most impactful improvements.
-Write your analysis in ${langName}.`;
-
-    const { text: reasoning } = await generateText({
-      model: ollama(modelToUse),
-      system: reasoningPrompt,
-      prompt: content,
-      temperature: 0,
-      maxOutputTokens: 500,
-    });
-
-    console.log(
-      "[AI] Pass 1 (reasoning) complete:",
-      reasoning.length,
-      "chars",
-    );
-
-    // --- Pass 2: Structured scoring with simplified 1-5 scale ---
-    // Small models score more accurately on a 1-5 range than 0-20.
-    // We scale up to the UI's expected ranges in post-processing.
-    const scoringPrompt = `Based on the analysis below, rate each category on a scale of 1 to 5.
-
-Rating guide:
-1 = Very poor (most elements missing)
-2 = Weak (some elements present but vague)
-3 = Adequate (core elements present, room for improvement)
-4 = Good (well-structured with minor gaps)
-5 = Excellent (comprehensive and well-crafted)
-
-Be fair. Reward what IS present. A prompt with clear goal, structure, and format deserves 3-4 even if not perfect.
-
-ANALYSIS:
-${reasoning}`;
+Be fair. Reward what IS present — a prompt with a clear goal, structure, and format deserves a score in the upper half of its range even if not perfect.
+Then list the top 3 most impactful improvements.
+Write all feedback in ${langName}.`;
 
     const { object: rawScores } = await generateObject({
-      model: ollama(modelToUse),
+      model: llmProvider.chat(modelToUse),
       schema: z.object({
         categories: z.object({
           structure: z.object({
-            rating: z.number().int().min(1).max(5),
+            score: z.number().int().min(0).max(CATEGORY_MAX.structure),
             feedback: z
               .string()
               .describe(`1-2 sentence summary in ${langName}.`),
@@ -212,19 +188,19 @@ ${reasoning}`;
               .describe("Specific strengths found."),
           }),
           context: z.object({
-            rating: z.number().int().min(1).max(5),
+            score: z.number().int().min(0).max(CATEGORY_MAX.context),
             feedback: z
               .string()
               .describe(`1-2 sentence summary in ${langName}.`),
           }),
           quality: z.object({
-            rating: z.number().int().min(1).max(5),
+            score: z.number().int().min(0).max(CATEGORY_MAX.quality),
             feedback: z
               .string()
               .describe(`1-2 sentence summary in ${langName}.`),
           }),
           viability: z.object({
-            rating: z.number().int().min(1).max(5),
+            score: z.number().int().min(0).max(CATEGORY_MAX.viability),
             feedback: z
               .string()
               .describe(`1-2 sentence summary in ${langName}.`),
@@ -236,60 +212,22 @@ ${reasoning}`;
           .describe(`Top 3 actionable improvements in ${langName}.`),
       }),
       messages: [
-        { role: "system", content: scoringPrompt },
-        {
-          role: "user",
-          content: `Rate the prompt: "${content.substring(0, 500)}"`,
-        },
+        { role: "system", content: systemPrompt },
+        { role: "user", content },
       ],
       temperature: 0,
     });
 
-    console.log("[AI] Pass 2 (scoring) complete — raw ratings:", {
-      structure: rawScores.categories.structure.rating,
-      context: rawScores.categories.context.rating,
-      quality: rawScores.categories.quality.rating,
-      viability: rawScores.categories.viability.rating,
-    });
+    const totalScore =
+      rawScores.categories.structure.score +
+      rawScores.categories.context.score +
+      rawScores.categories.quality.score +
+      rawScores.categories.viability.score;
 
-    // Scale 1-5 ratings to UI ranges: structure/context/quality → 0-16, viability → 0-12
-    // Total max = 60 (calibrated for 3B model output range)
-    const scaleScore = (rating: number, max: number) =>
-      Math.round((rating / 5) * max);
+    const data = { ...rawScores, totalScore };
 
-    const object = {
-      categories: {
-        structure: {
-          score: scaleScore(rawScores.categories.structure.rating, 16),
-          feedback: rawScores.categories.structure.feedback,
-          strengths: rawScores.categories.structure.strengths,
-        },
-        context: {
-          score: scaleScore(rawScores.categories.context.rating, 16),
-          feedback: rawScores.categories.context.feedback,
-        },
-        quality: {
-          score: scaleScore(rawScores.categories.quality.rating, 16),
-          feedback: rawScores.categories.quality.feedback,
-        },
-        viability: {
-          score: scaleScore(rawScores.categories.viability.rating, 12),
-          feedback: rawScores.categories.viability.feedback,
-        },
-      },
-      prioritySuggestions: rawScores.prioritySuggestions,
-    };
-
-    const computedTotal =
-      object.categories.structure.score +
-      object.categories.context.score +
-      object.categories.quality.score +
-      object.categories.viability.score;
-
-    const correctedData = { ...object, totalScore: computedTotal };
-
-    console.log("[AI] Enhanced Analysis complete:", correctedData);
-    return { success: true, data: correctedData };
+    console.log("[AI] Enhanced Analysis complete:", data);
+    return { success: true, data };
   } catch (error) {
     console.error("Enhanced Analysis Error:", error);
     return { success: false, error: "Failed to perform enhanced analysis." };
@@ -322,10 +260,10 @@ export async function optimizePromptEnhanced(
       | undefined;
     if (cats) {
       const scores = [
-        `Structure: ${cats.structure?.score ?? "?"}/20`,
-        `Context: ${cats.context?.score ?? "?"}/20`,
-        `Quality: ${cats.quality?.score ?? "?"}/20`,
-        `Viability: ${cats.viability?.score ?? "?"}/15`,
+        `Structure: ${cats.structure?.score ?? "?"}/${CATEGORY_MAX.structure}`,
+        `Context: ${cats.context?.score ?? "?"}/${CATEGORY_MAX.context}`,
+        `Quality: ${cats.quality?.score ?? "?"}/${CATEGORY_MAX.quality}`,
+        `Viability: ${cats.viability?.score ?? "?"}/${CATEGORY_MAX.viability}`,
       ];
       scoreContext = `\nCurrent scores (focus on the lowest):\n${scores.join(" | ")}`;
     }
@@ -349,32 +287,23 @@ Rules:
 - Keep it concise but thorough`;
 
   try {
-    const modelToUse =
-      process.env.ANALYSIS_MODEL || process.env.DEFAULT_MODEL || DEFAULT_LLM;
+    const modelToUse = process.env.ANALYSIS_MODEL || ANALYSIS_LLM;
     console.log(
-      `[AI] Enhanced Optimization with generateText (score: ${previousScore}/75)...`,
+      `[AI] Enhanced Optimization with generateText (score: ${previousScore}/60)...`,
     );
 
-    // Truncate very long input to prevent timeouts and score=0 on re-analysis
-    const maxInputChars = 2000;
-    const inputContent =
-      content.length > maxInputChars
-        ? content.substring(0, maxInputChars) +
-          "\n\n[...truncated for optimization]"
-        : content;
-
     const { text } = await generateText({
-      model: ollama(modelToUse),
+      model: llmProvider.chat(modelToUse),
       system: systemPrompt,
-      prompt: inputContent,
+      prompt: content,
       temperature: 0.5,
-      maxOutputTokens: 600,
+      maxOutputTokens: 1500,
     });
 
     // Post-process: strip meta-commentary that small models add
     let optimizedContent = text.trim();
 
-    // Strip thinking tags from models like Qwen3 that use <think>...</think>
+    // Strip thinking/reasoning tags some local models (e.g. gpt-oss) leak as <think>...</think>
     optimizedContent = optimizedContent
       .replace(/<think>[\s\S]*?<\/think>/g, "")
       .trim();
@@ -468,7 +397,7 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
     `;
 
     const { object } = await generateObject({
-      model: ollama(modelToUse),
+      model: llmProvider.chat(modelToUse),
       schema: z.object({
         tagIds: z
           .array(z.string())
@@ -479,6 +408,7 @@ export async function suggestSmartTags(content: string, locale: string = "en") {
         { role: "user", content },
       ],
       temperature: 0.1, // Low temp for precision
+      providerOptions: { openai: { reasoningEffort: "low" } },
     });
 
     console.log("[AI] Suggested Tag IDs (raw):", object.tagIds);
@@ -517,98 +447,57 @@ export async function checkAIGateway() {
 
     // Simple fast check
     const { text } = await generateText({
-      model: ollama(model),
+      model: llmProvider.chat(model),
       prompt: "respond with 'ok'",
     });
 
     return { success: true, model, status: text };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`[AI] Health Check Failed: ${message}`);
-    const host = process.env.OLLAMA_HOST || "unknown";
+  } catch (error: any) {
+    console.error(`[AI] Health Check Failed: ${error.message}`);
     return {
       success: false,
-      error: message,
-      host,
-      hint: host.includes("localhost")
-        ? "Docker container cannot reach 'localhost'. Use 'host.docker.internal' and ensure Ollama binds to 0.0.0.0"
-        : "Check Ollama logs",
+      error: error.message,
+      host: llmBaseUrl,
+      hint: "Check that freeLLMAPI is running (http://localhost:3001) and that LLM_BASE_URL/LLM_API_KEY/DEFAULT_MODEL are set correctly.",
     };
   }
 }
 
 /**
  * Lightweight system status check for the SystemMonitor component.
- * Fetches Ollama connectivity, running model info, and VRAM usage — no LLM inference.
+ * Pings freeLLMAPI's /models endpoint for connectivity — no LLM inference.
  */
 export async function getSystemStatus() {
-  const host = process.env.OLLAMA_HOST || "http://localhost:11434";
   const defaultModel = process.env.DEFAULT_MODEL || DEFAULT_LLM;
 
-  let ollamaOnline = false;
+  let online = false;
   let activeModel: string | null = null;
-  let modelMemoryMB = 0;
-  let modelLoaded = false;
-  let sizeVram = 0;
-  let sizeTotal = 0;
 
   try {
-    // Check connectivity + available models via /api/tags
-    const tagsRes = await fetch(`${host}/api/tags`, {
+    const res = await fetch(`${llmBaseUrl}/models`, {
+      headers: process.env.LLM_API_KEY
+        ? { Authorization: `Bearer ${process.env.LLM_API_KEY}` }
+        : undefined,
       signal: AbortSignal.timeout(3000),
     });
 
-    if (tagsRes.ok) {
-      ollamaOnline = true;
-      const tagsData = await tagsRes.json();
-      const models = tagsData.models || [];
-      const configuredModel = models.find(
-        (m: { name: string }) =>
-          m.name === defaultModel || m.name === `${defaultModel}:latest`,
-      );
-      activeModel = configuredModel?.name || models[0]?.name || defaultModel;
-    }
-
-    // Get running model info via /api/ps
-    if (ollamaOnline) {
-      try {
-        const psRes = await fetch(`${host}/api/ps`, {
-          signal: AbortSignal.timeout(3000),
-        });
-        if (psRes.ok) {
-          const psData = await psRes.json();
-          const runningModels = psData.models || [];
-          if (runningModels.length > 0) {
-            const model = runningModels[0];
-            const sizeBytes = model.size || 0;
-            modelMemoryMB = Math.round(sizeBytes / (1024 * 1024));
-            activeModel = model.name || activeModel;
-            modelLoaded = true;
-            sizeVram = model.size_vram || 0;
-            sizeTotal = sizeBytes;
-          }
-        }
-      } catch {
-        // /api/ps failed but Ollama is still online (no model loaded)
-      }
+    if (res.ok) {
+      online = true;
+      const data = await res.json();
+      const models = data.data || [];
+      activeModel =
+        models.find((m: any) => m.id === defaultModel)?.id ||
+        models[0]?.id ||
+        defaultModel;
     }
   } catch {
-    ollamaOnline = false;
+    online = false;
   }
 
-  // Calculate GPU vs CPU split (what % of the model is in VRAM)
-  const gpuPercent =
-    modelLoaded && sizeTotal > 0
-      ? Math.round((sizeVram / sizeTotal) * 100)
-      : 0;
-
   return {
-    ollama: {
-      online: ollamaOnline,
+    llm: {
+      online,
       model: activeModel,
-      memoryMB: modelMemoryMB,
-      modelLoaded,
-      gpuPercent,
     },
   };
 }
@@ -669,12 +558,13 @@ export async function predictDimension(
     `;
 
     const { object } = await generateObject({
-      model: ollama(modelToUse),
+      model: llmProvider.chat(modelToUse),
       schema: z.object({
         dimensionId: z.string(),
       }),
       messages: [{ role: "system", content: systemPrompt }],
       temperature: 0.1,
+      providerOptions: { openai: { reasoningEffort: "low" } },
     });
 
     // Verify the predicted ID exists

@@ -56,7 +56,7 @@
     "aiSuggestions": "AI Suggestions",
     "applyAll": "Apply All",
     "autoTagInfo": "Tags are auto-suggested as you type.",
-    "analysisError": "Analysis failed. Check that Ollama is running.",
+    "analysisError": "Analysis failed. Check that LM Studio is running.",
     "optimizeError": "Optimization failed. Try again.",
     "Evaluation": {
       "totalScore": "Total Score",
@@ -100,8 +100,6 @@
     }
   },
   "SystemMonitor": {
-    "neuralLoad": "NEURAL LOAD",
-    "memory": "CTX MEM",
     "status": "STATUS",
     "idle": "IDLE",
     "processing": "PROCESSING",

@@ -4,115 +4,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**PromptVault** is a Next.js 16 (React 19) web application for managing and versioning AI prompts with a terminal-inspired UI. Features: version control, AI-powered smart tagging (via Ollama), bilingual support (es/en), prompt analysis/evaluation, pgvector semantic search, and Docker-based local AI infrastructure.
-
-## Tech Stack
-
-- **Framework**: Next.js 16 (React 19)
-- **Language**: TypeScript (strict mode)
-- **Database**: PostgreSQL + pgvector (via Drizzle ORM)
-- **AI**: Ollama (local LLM) + AI SDK (`@ai-sdk/openai`)
-- **i18n**: next-intl (es/en locales)
-- **Styling**: Tailwind CSS 4 + PostCSS + Framer Motion
-- **UI Components**: Lucide React Icons
-- **Utilities**: date-fns, uuid, clsx, tailwind-merge, zod
-- **Package Manager**: pnpm
-- **Deployment**: Docker Compose (app + PostgreSQL + Nginx + Drizzle Studio)
+**PromptVault** is a Next.js 16 (React 19) web application for managing and versioning AI prompts with a terminal-inspired UI. Features: version control, AI-powered smart tagging (via freeLLMAPI), bilingual support (es/en), prompt analysis/evaluation, pgvector semantic search, and Docker-based local AI infrastructure.
 
 ## Architecture
 
 One React context: `SettingsContext` (app preferences). Server Actions + Drizzle ORM for persistence. The root `src/app/[locale]/page.tsx` renders the Vault page directly.
 
-### Directory Structure
-
-```
-src/
-├── app/
-│   ├── [locale]/page.tsx      # Entry point (renders Vault)
-│   ├── actions/               # Server actions (ai.ts, taxonomy.ts)
-│   └── api/chat/              # Chat API route
-├── components/
-│   ├── terminal/              # Terminal UI (BunkerHUD, BunkerHeader, QuickTerminal, SystemStats)
-│   ├── ui/                    # Reusable UI components
-│   ├── PromptEditor.tsx       # Create/edit modal with translation + AI analysis
-│   ├── TerminalSearch.tsx     # Tag autocomplete (space=select, backspace=remove, enter=confirm)
-│   ├── TaxonomyManager.tsx    # Smart tagging taxonomy CRUD
-│   ├── SystemMonitor.tsx      # CPU, Ollama connectivity, model memory
-│   ├── SettingsModal.tsx      # App settings (language, theme, developer mode)
-│   └── ...                    # TagCloud, TagBadge, PromptCard, ThemeToggle, LocaleSwitcher, etc.
-├── contexts/                  # SettingsContext (app preferences)
-├── db/
-│   ├── schema.ts              # Drizzle schema (prompts, tags, tagDimensions, settings, promptTags)
-│   └── seed.ts, seed-tags.ts  # Seed scripts
-├── hooks/                     # useProcessSimulator
-├── i18n/                      # next-intl config (routing.ts, request.ts)
-├── lib/
-│   ├── actions/               # vault.ts, settings.ts
-│   ├── compiler.ts            # Prompt compilation logic
-│   └── vectorize.ts           # pgvector embedding generation
-├── types/
-│   └── index.ts               # Prompt, PromptVersion, Tag, SmartTag, TagDimension, Taxonomy, AnalysisResult
-└── utils/                     # classification.ts, styling.ts, cn.ts, languageDetection.ts
-```
-
 ### Database Schema (PostgreSQL + pgvector)
 
 Key tables: `prompts` (bilingual titles/descriptions, content, versions JSONB, 768-dim embedding vector), `tags` + `tag_dimensions` (multi-dimensional taxonomy), `prompt_tags` (M2M), `settings` (singleton id=1).
 
-All text fields are bilingual (`*_es`, `*_en`). The `tags` array on prompts is a read cache; canonical tag relationships live in `prompt_tags`.
+All text fields are bilingual (`*_es`, `*_en`).
 
 ### Data Flow
 
 1. **Initialization**: Root page renders VaultPage client component which fetches data via server actions
 2. **State**: SettingsContext handles app preferences
 3. **Filtering**: AND logic for tags + case-insensitive text search on title/description/content
-4. **Save**: Creates new version entry in JSONB array, auto-tags via AI (Ollama) or keyword fallback
-5. **Smart Tagging**: Ollama classifies prompts against the taxonomy (tag_dimensions + tags)
+4. **Save**: Creates new version entry in JSONB array, auto-tags via AI (freeLLMAPI) or keyword fallback
+5. **Smart Tagging**: The LLM classifies prompts against the taxonomy (tag_dimensions + tags)
 6. **Analysis**: AI-powered prompt evaluation with scoring rubric (structure, context, quality, viability)
-
-## Commands
-
-```bash
-pnpm install                  # Install dependencies
-pnpm run dev                  # Dev server (http://localhost:3000)
-pnpm build                    # Production build
-pnpm start                    # Production server
-pnpm run lint                 # TypeScript + ESLint
-
-# Database (Drizzle)
-pnpm run db:generate          # Generate migrations from schema
-pnpm run db:migrate           # Run migrations
-pnpm run db:push              # Push schema directly (dev)
-pnpm run db:studio            # Drizzle Studio UI (port 4984)
-pnpm run db:seed              # Seed database
-
-# Docker (services: db, app, studio, nginx)
-docker compose up -d          # Start all services
-docker compose down           # Stop all services
-pnpm run build:standalone     # Build standalone output for Docker
-pnpm run clean:install        # Nuclear reinstall (rm node_modules + lockfile)
-```
 
 ## Environment Setup
 
-Required env vars (see `.env.example`):
-
-| Variable                     | Docker value                                       | Local dev value                                           |
-| ---------------------------- | -------------------------------------------------- | --------------------------------------------------------- |
-| `DATABASE_URL`               | `postgresql://admin:secret@db:5432/promptvault_db` | `postgresql://admin:secret@localhost:5433/promptvault_db` |
-| `OLLAMA_HOST`                | `http://ollama:11434`                              | `http://localhost:11434`                                  |
-| `DEFAULT_MODEL`              | `qwen2.5:1.5b`                                     | `qwen2.5:3b`                                              |
-| `ANALYSIS_MODEL`             | `qwen2.5:7b`                                       | `qwen2.5:7b`                                              |
-| `NEXT_PUBLIC_DEFAULT_LOCALE` | `es`                                               | `es`                                                      |
-
-Docker uses internal service names (`db`) for networking. Ollama runs on the **host machine** (not containerized) — app reaches it via `host.docker.internal`. External ports: app=3080, db=5433, studio=4984, nginx=80.
+Required env vars: see `.env.example` (each variable is commented with its Docker vs. local-dev value).
 
 ## Key Patterns
 
 - **Bilingual everywhere**: All user-facing text has `*Es`/`*En` variants in DB and types
 - **Immutable versions**: New version created on save, old versions preserved in JSONB array
 - **Smart tagging**: Multi-dimensional taxonomy (tag_dimensions -> tags -> prompt_tags) with AI classification
-- **Ollama via OpenAI compat**: AI SDK connects to Ollama's `/v1` endpoint using `@ai-sdk/openai` provider with `apiKey: "ollama"`
+- **freeLLMAPI via OpenAI compat**: AI SDK connects directly to freeLLMAPI's `/v1` endpoint using `@ai-sdk/openai`'s `.chat()` method (Chat Completions — see Gotchas for why no the default Responses API)
 - **Type safety**: Strict TypeScript; types in `src/types/index.ts`
 - **Path alias**: `@/*` maps to `src/*`
 - **Client components**: Most components use `'use client'` directive
@@ -122,10 +44,15 @@ Docker uses internal service names (`db`) for networking. Ollama runs on the **h
 
 - DB host is `db` inside Docker but `localhost:5433` when running Next.js outside Docker
 - The `tags` text array on the `prompts` table is a **read cache** — the source of truth is the `prompt_tags` join table
-- pgvector embeddings are 768-dim (sized for nomic-embed-text / Qwen models)
+- pgvector embeddings are 768-dim; `src/lib/vectorize.ts` pins the embedding model (`nomic-embed-text`) instead of using `DEFAULT_MODEL` — a changing model/dimension would break existing vectors. Re-run `pnpm run db:backfill-embeddings` if the pinned model ever changes. The exact id must match what freeLLMAPI reports at `GET /v1/models`.
 - Settings table is a singleton (always `id=1`)
 - The `versions` field on prompts is JSONB (not a separate table)
-- Ollama is **not containerized** — runs on host for GPU access; Docker app uses `extra_hosts: host.docker.internal` to reach it
+- freeLLMAPI runs as a Docker container with OpenAI-compatible API. Docker app uses `host.docker.internal` to reach the host; scripts run directly on the host (`pnpm run db:backfill-embeddings`, `pnpm run dev` outside Docker) need `http://127.0.0.1:3001/v1`.
+- Use `127.0.0.1`, not `localhost`, for the host-side `LLM_BASE_URL`: on this machine `localhost` resolves to `::1` (IPv6) first, and freeLLMAPI's server doesn't accept IPv6 connections. `curl` masks this (it silently falls back to IPv4), but Node's `fetch` (used by the AI SDK) does not — it fails outright with `ECONNREFUSED ::1:3001`.
+- freeLLMAPI requires a valid API key generated from the dashboard (http://localhost:3001). Set `LLM_API_KEY` in `.env` after creating your account and API key.
+- There is no `db:seed` script anymore — `seed.ts` (example prompts) was removed. `pnpm run db:seed-tags` seeds the minimum needed for the app to function: the tag taxonomy (dimensions + tags). Prompts start empty.
+- If freeLLMAPI hasn't loaded a model yet, the *first* request after a cold start can be slow or time out — not a bug, just retry.
+- `@ai-sdk/openai`'s bare `provider(modelId)` defaults to the Responses API (`/v1/responses`). freeLLMAPI accepts those requests but doesn't honor structured output there — `generateObject` calls come back with unparseable prose instead of JSON. Always call `llmProvider.chat(modelId)` (Chat Completions) in `src/app/actions/ai.ts`.
 - `next.config.ts` wraps config with `withNextIntl()` and sets `serverExternalPackages: ["drizzle-orm"]`
 - i18n middleware matches `["/", "/(es|en)/:path*"]`; default locale is `es`; messages live in `messages/es.json` and `messages/en.json`
 - `APP_DOCKERFILE` env var switches between `Dockerfile.dev` (hot reload) and `Dockerfile` (standalone production)

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/utils/cn";
 import { useTranslations } from "next-intl";
-import { Cpu, Zap, Radio } from "lucide-react";
+import { Radio } from "lucide-react";
 import { getSystemStatus } from "@/app/actions/ai";
 
 interface SystemMonitorProps {
@@ -10,12 +10,9 @@ interface SystemMonitorProps {
 }
 
 interface SystemStatus {
-  ollama: {
+  llm: {
     online: boolean;
     model: string | null;
-    memoryMB: number;
-    modelLoaded: boolean;
-    gpuPercent: number;
   };
 }
 
@@ -65,23 +62,8 @@ export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
     };
   }, [isActive]);
 
-  const memoryMB = status?.ollama.memoryMB ?? 0;
-  const ollamaOnline = status?.ollama.online ?? false;
-  const modelName = status?.ollama.model ?? null;
-  const modelLoaded = status?.ollama.modelLoaded ?? false;
-  const gpuPercent = status?.ollama.gpuPercent ?? 0;
-
-  // Strip ":latest" suffix for cleaner display
-  const displayModel = modelName?.replace(/:latest$/, "") ?? null;
-
-  // Compute processor label: "GPU", "CPU", or "GPU/CPU" split
-  const processorLabel = modelLoaded
-    ? gpuPercent === 100
-      ? "GPU"
-      : gpuPercent === 0
-        ? "CPU"
-        : `GPU ${gpuPercent}%`
-    : "—";
+  const llmOnline = status?.llm.online ?? false;
+  const modelName = status?.llm.model ?? null;
 
   return (
     <div
@@ -90,80 +72,7 @@ export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
         className,
       )}
     >
-      {/* Processor — Ollama GPU/CPU split */}
-      <div className="flex flex-col min-w-[100px]">
-        <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono mb-0.5 tracking-tighter">
-          <span className="flex items-center gap-1">
-            <Cpu size={10} />
-            {t("neuralLoad")}
-          </span>
-          <span
-            className={cn(
-              "font-bold transition-colors duration-300",
-              !modelLoaded
-                ? "text-gray-500"
-                : gpuPercent > 0
-                  ? "text-green-400"
-                  : "text-yellow-400",
-            )}
-          >
-            {processorLabel}
-          </span>
-        </div>
-        <div className="h-1 bg-white/10 rounded-full overflow-hidden w-full relative">
-          <div
-            className={cn(
-              "absolute left-0 top-0 h-full transition-all duration-700 ease-out",
-              !modelLoaded
-                ? "bg-gray-600"
-                : gpuPercent > 0
-                  ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"
-                  : "bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]",
-            )}
-            style={{
-              width: modelLoaded ? `${gpuPercent}%` : "0%",
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Vertical Separator */}
-      <div className="w-px h-6 bg-white/10" />
-
-      {/* Context Memory — Real Ollama Model Memory */}
-      <div className="flex flex-col min-w-[100px]">
-        <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono mb-0.5 tracking-tighter">
-          <span className="flex items-center gap-1">
-            <Zap size={10} />
-            {t("memory")}
-          </span>
-          <span className="text-blue-400 transition-colors">
-            {memoryMB > 0 ? `${memoryMB}MB` : "—"}
-          </span>
-        </div>
-        <div className="flex gap-0.5 h-1 items-end w-full">
-          {/* Binary-like visualization bars — scaled relative to 4GB max */}
-          {Array.from({ length: 16 }).map((_, i) => {
-            const active = memoryMB > 0 && i < (memoryMB / 4096) * 16;
-            return (
-              <div
-                key={i}
-                className={cn(
-                  "flex-1 rounded-sm transition-colors duration-200",
-                  active
-                    ? "bg-blue-500 shadow-[0_0_4px_rgba(59,130,246,0.5)] h-full"
-                    : "bg-white/5 h-[2px]",
-                )}
-              />
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Vertical Separator */}
-      <div className="w-px h-6 bg-white/10" />
-
-      {/* LLM Status — Real Ollama Connectivity */}
+      {/* LLM Status — freeLLMAPI connectivity */}
       <div className="flex items-center gap-2">
         {isChecking ? (
           // Checking state
@@ -173,12 +82,12 @@ export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
               {t("checking")}
             </span>
           </div>
-        ) : ollamaOnline ? (
+        ) : llmOnline ? (
           // Online — show model name
           <div className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)] animate-pulse" />
             <span className="text-[10px] font-mono text-green-400 tracking-tighter whitespace-nowrap">
-              {displayModel || t("online")}
+              {modelName || t("online")}
             </span>
           </div>
         ) : (

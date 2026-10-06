@@ -24,18 +24,7 @@ services:
     networks:
       - vault_network
 
-  # Motor de IA Local (DISABLED - Using Host Machine for GPU)
-  # ollama:
-  #   image: ollama/ollama
-  #   container_name: vault_ai
-  #   volumes:
-  #     - ollama_data:/root/.ollama
-  #   ports:
-  #     - "${OLLAMA_PORT}:11434"
-  #   environment:
-  #     - OLLAMA_KEEP_ALIVE=30m
-  #   networks:
-  #     - vault_network
+  # Motor de IA: LM Studio corre en el host (no containerizado), ver LLM_BASE_URL
 
   # Schema sync (idempotent — solo aplica diferencias)
   migrate:
@@ -61,9 +50,10 @@ services:
     restart: always
     environment:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-      OLLAMA_HOST: ${OLLAMA_HOST}
-      DEFAULT_MODEL: ${DEFAULT_MODEL:-qwen2.5:3b}
-      ANALYSIS_MODEL: ${ANALYSIS_MODEL:-qwen2.5:7b}
+      LLM_BASE_URL: ${LLM_BASE_URL}
+      LLM_API_KEY: ${LLM_API_KEY}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-google/gemma-4-12b}
+      ANALYSIS_MODEL: ${ANALYSIS_MODEL:-openai/gpt-oss-20b}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

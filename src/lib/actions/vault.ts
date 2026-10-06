@@ -88,7 +88,6 @@ export async function savePrompt(data: {
 }) {
   try {
     console.log("!!! SAVE_PROMPT START !!!");
-    console.log("OLLAMA_HOST:", process.env.OLLAMA_HOST);
     console.log("Data Payload:", JSON.stringify(data, null, 2));
     console.log("!!! SAVE PROMPT V4 - FORCE UPDATE !!!");
 

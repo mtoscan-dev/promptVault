@@ -14,8 +14,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio --port 4984",
-    "db:seed": "DATABASE_URL=postgresql://admin:secret@localhost:5433/promptvault_db pnpm tsx db/seed.ts",
-    "db:seed-tags": "DATABASE_URL=postgresql://admin:secret@localhost:5433/promptvault_db pnpm tsx src/db/seed-tags.ts"
+    "db:seed-tags": "DATABASE_URL=postgresql://admin:secret@localhost:5433/promptvault_db pnpm tsx src/db/seed-tags.ts",
+    "db:backfill-embeddings": "DATABASE_URL=postgresql://admin:secret@localhost:5433/promptvault_db pnpm tsx --env-file-if-exists=.env src/db/backfill-embeddings.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.29",
@@ -29,7 +29,6 @@
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
     "next-intl": "^4.8.2",
-    "ollama": "^0.6.3",
     "postgres": "^3.4.8",
     "react": "19.0.0",
     "react-dom": "19.0.0",

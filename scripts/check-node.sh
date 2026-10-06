@@ -12,52 +12,36 @@ source .env
 
 echo -e "${CYAN}🏔️  STARTING NODE DIAGNOSTIC: ${PATAGONIA_NODE_ID}${NC}"
 
-# Override OLLAMA_HOST for local host execution
-# This script runs on your machine, so we always want localhost, even if .env says host.docker.internal
-CHECK_HOST="http://localhost:11434"
+# freeLLMAPI always runs on localhost:3001
+CHECK_HOST="http://127.0.0.1:3001"
 
-# 1. VERIFY OLLAMA CONNECTION
-echo -e "${AMBER}📡 Verifying connection with Ollama engine at $CHECK_HOST...${NC}"
+# 1. VERIFY FREELLMAPI CONNECTION
+echo -e "${AMBER}📡 Verifying connection with freeLLMAPI at $CHECK_HOST...${NC}"
 
-if command -v ollama &> /dev/null; then
-    # PREFERRED: Use native CLI
-    if ollama list &> /dev/null; then
-        echo -e "${GREEN}✅ Ollama (CLI) is responding.${NC}"
-    else
-        echo -e "${RED}❌ ERROR: Ollama CLI detected but not responding.${NC}"
-        echo -e "Ensure the Ollama app is running."
-        exit 1
-    fi
-elif curl -s -f "$CHECK_HOST/api/tags" > /dev/null; then
-    # FALLBACK: Use HTTP API
-    echo -e "${GREEN}✅ Ollama (API) is ONLINE at $CHECK_HOST${NC}"
+if curl -s -f "${CHECK_HOST}/v1/models" > /dev/null; then
+    echo -e "${GREEN}✅ freeLLMAPI (API) is ONLINE at $CHECK_HOST${NC}"
 else
-    echo -e "${RED}❌ ERROR: Could not contact Ollama at $CHECK_HOST${NC}"
-    echo -e "Ensure the Ollama app is running on your Mac."
+    echo -e "${RED}❌ ERROR: Could not contact freeLLMAPI at $CHECK_HOST${NC}"
+    echo -e "Ensure the freeLLMAPI container is running: docker ps | grep freellmapi"
+    echo -e "Start with: docker compose up -d freellmapi (or run freellmapi manually)"
     exit 1
 fi
 
-# 2. VERIFY MODEL AVAILABILITY
+# 2. VERIFY MODEL AVAILABILITY (via freeLLMAPI)
 echo -e "${AMBER}🧠 Searching for operational model: $DEFAULT_MODEL...${NC}"
 
-if command -v ollama &> /dev/null; then
-    # Use CLI to check and pull
-    if ollama list | grep -q "$DEFAULT_MODEL"; then
-        echo -e "${GREEN}✅ Model $DEFAULT_MODEL detected.${NC}"
-    else
-        echo -e "${AMBER}⚠️  Model not detected. Initiating download of $DEFAULT_MODEL...${NC}"
-        ollama pull "$DEFAULT_MODEL"
-    fi
+MODELS_LIST=$(curl -s -H "Authorization: Bearer ${LLM_API_KEY:-freeapi}" "${CHECK_HOST}/v1/models" 2>/dev/null || echo "")
+
+if [[ $MODELS_LIST == *"$DEFAULT_MODEL"* ]]; then
+    echo -e "${GREEN}✅ Model $DEFAULT_MODEL detected in freeLLMAPI.${NC}"
 else
-    # Fallback to API check (legacy)
-    MODELS_LIST=$(curl -s "$CHECK_HOST/api/tags")
-    if [[ $MODELS_LIST == *"$DEFAULT_MODEL"* ]]; then
-        echo -e "${GREEN}✅ Model $DEFAULT_MODEL detected.${NC}"
-    else
-        echo -e "${RED}❌ Model $DEFAULT_MODEL not found and 'ollama' CLI missing.${NC}"
-        echo -e "Please install Ollama CLI or manually pull the model."
-        exit 1
-    fi
+    echo -e "${AMBER}⚠️  Model $DEFAULT_MODEL not found in freeLLMAPI.${NC}"
+    echo -e "Available models (sample):"
+    echo "$MODELS_LIST" | head -c 2000 || echo "(unable to list)"
+    echo ""
+    echo -e "Configure models in freeLLMAPI dashboard: http://localhost:3001"
+    echo -e "Note: freeLLMAPI requires a valid API key in .env LLM_API_KEY."
+    # Don't exit 1 — model may be added later, or user may configure manually
 fi
 
 # 3. RESOURCE AUDIT (RAM CHECK)

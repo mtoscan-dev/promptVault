@@ -10,16 +10,14 @@ if [ -f .env ]; then
   export $(grep -v '^#' .env | xargs)
 fi
 
-# 0.5. Check Host Ollama Status (Host Mode)
-echo "🔍 Checking Host Ollama status..."
-if ! curl -s --head  --request GET http://host.docker.internal:11434/ | grep "200 OK" > /dev/null && ! curl -s --head  --request GET http://localhost:11434/ | grep "200 OK" > /dev/null; then
-  echo -e "${AMBER}⚠️  HOST OLLAMA NOT DETECTED!${NC}"
-  echo "   Please ensure Ollama is running on your Mac."
-  echo "   Download: https://ollama.com"
-  # Optional: Exit or continue with warning
-  # exit 1
+# 0.5. Check freeLLMAPI Status
+echo "🔍 Checking freeLLMAPI status..."
+if curl -s --head --request GET http://127.0.0.1:3001/v1/models > /dev/null 2>&1; then
+  echo -e "${GREEN}✅ freeLLMAPI detected at http://127.0.0.1:3001${NC}"
 else
-  echo -e "${GREEN}✅ Host Ollama detected.${NC}"
+  echo -e "${AMBER}⚠️  freeLLMAPI not responding at http://127.0.0.1:3001${NC}"
+  echo "   Ensure the freeLLMAPI container is running: docker ps | grep freellmapi"
+  echo "   Start with: docker compose up -d freellmapi (or run freellmapi manually)"
 fi
 
 # 1. Levantar contenedores y limpiar huérfanos
