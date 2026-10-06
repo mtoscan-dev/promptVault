@@ -15,7 +15,7 @@ const ollama = createOpenAI({
 });
 
 export async function translatePromptFields(
-  data: { title: string; description: string; content: string },
+  data: { title?: string; description?: string; content?: string },
   targetLang: "es" | "en",
 ) {
   console.log(`[AI] Starting translation to ${targetLang}...`);
@@ -522,12 +522,13 @@ export async function checkAIGateway() {
     });
 
     return { success: true, model, status: text };
-  } catch (error: any) {
-    console.error(`[AI] Health Check Failed: ${error.message}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[AI] Health Check Failed: ${message}`);
     const host = process.env.OLLAMA_HOST || "unknown";
     return {
       success: false,
-      error: error.message,
+      error: message,
       host,
       hint: host.includes("localhost")
         ? "Docker container cannot reach 'localhost'. Use 'host.docker.internal' and ensure Ollama binds to 0.0.0.0"
@@ -562,7 +563,7 @@ export async function getSystemStatus() {
       const tagsData = await tagsRes.json();
       const models = tagsData.models || [];
       const configuredModel = models.find(
-        (m: any) =>
+        (m: { name: string }) =>
           m.name === defaultModel || m.name === `${defaultModel}:latest`,
       );
       activeModel = configuredModel?.name || models[0]?.name || defaultModel;

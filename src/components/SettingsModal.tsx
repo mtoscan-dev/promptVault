@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { X, Monitor, Sliders, Cpu, Save } from "lucide-react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
+import { X, Monitor, Sliders, Cpu, Save, type LucideIcon } from "lucide-react";
 import { createPortal } from "react-dom";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings, type ExportLanguage } from "@/contexts/SettingsContext";
 import { useTranslations } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/routing";
 
@@ -14,9 +14,16 @@ interface SettingsModalProps {
 
 type TabId = "general" | "appearance" | "system";
 
+const subscribeNoop = () => () => {};
+
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<TabId>("general");
-  const [mounted, setMounted] = useState(false);
+  // true on the client, false during SSR (portal target only exists client-side)
+  const mounted = useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
 
   // Use Context for Global State & Persistence
   const {
@@ -35,7 +42,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const t = useTranslations("Settings");
 
   useEffect(() => {
-    setMounted(true);
     // Lock scroll when modal is open
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -151,7 +157,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   >
                     <select
                       value={exportLanguage}
-                      onChange={(e) => setExportLanguage(e.target.value as any)}
+                      onChange={(e) => setExportLanguage(e.target.value as ExportLanguage)}
                       className="bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:border-(--acc-primary) outline-none transition-colors"
                     >
                       <option value="original">{t("options.original")}</option>
@@ -280,7 +286,7 @@ function TabButton({
 }: {
   id: TabId;
   label: string;
-  icon: any;
+  icon: LucideIcon;
   isActive: boolean;
   onClick: () => void;
 }) {

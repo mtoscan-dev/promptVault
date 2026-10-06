@@ -52,7 +52,6 @@ export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
   // Animated tokens/s when processing (simulated — real t/s requires streaming hooks)
   useEffect(() => {
     if (!isActive) {
-      setTokensPerSec(0);
       return;
     }
 
@@ -60,7 +59,10 @@ export function SystemMonitor({ isActive, className }: SystemMonitorProps) {
       setTokensPerSec(Math.floor(45 + Math.random() * 15));
     }, 200);
 
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      setTokensPerSec(0);
+    };
   }, [isActive]);
 
   const memoryMB = status?.ollama.memoryMB ?? 0;

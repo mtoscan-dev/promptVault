@@ -64,6 +64,6 @@ export function SystemStats() {
 }
 
 // Helper function to avoid issues if utils/cn is not ready
-function cn(...classes: any[]) {
+function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }

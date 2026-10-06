@@ -26,7 +26,6 @@ export default function VaultPage() {
   const pathname = usePathname();
 
   const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
@@ -39,7 +38,7 @@ export default function VaultPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Derive Tags
-  useEffect(() => {
+  const tags = useMemo(() => {
     const tagMap = new Map<string, number>();
     prompts.forEach((prompt) => {
       prompt.tags.forEach((tag) => {
@@ -55,7 +54,7 @@ export default function VaultPage() {
       }),
     );
 
-    setTags(tagList.sort((a, b) => b.count - a.count));
+    return tagList.sort((a, b) => b.count - a.count);
   }, [prompts]);
 
   // Derive Tag Counts for Card Logic (immediate consistency)
@@ -290,6 +289,8 @@ export default function VaultPage() {
   // URL Param Listener
   useEffect(() => {
     if (searchParams.get("new") === "true") {
+      // Syncs with an external system (URL search params), not derived state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       handleNewPrompt();
       // Clear param without reload
       router.replace(pathname);
