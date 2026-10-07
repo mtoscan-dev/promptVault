@@ -37,7 +37,6 @@ touch src/components/forge/LiveBlueprint.tsx
 touch src/components/terminal/QuickTerminal.tsx
 
 # Hooks & Libs
-touch src/hooks/use-ollama-stream.ts
 touch src/lib/compiler.ts
 
 # 3. Verificación de Dependencias Esenciales
