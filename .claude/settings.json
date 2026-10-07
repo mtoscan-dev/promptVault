@@ -19,7 +19,6 @@
       "Read(./.env)",
       "Read(./.env.*)",
       "Read(./postgres_data/**)",
-      "Read(./ollama_data/**)",
       "Read(./backups/**)",
       "Bash(pnpm run clean:install:*)",
       "Bash(docker compose down -v:*)"

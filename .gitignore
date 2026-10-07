@@ -8,7 +8,6 @@ node_modules
 /out/
 
 # Datos Persistentes y Volúmenes (Nuevas carpetas)
-/ollama_data/
 /postgres_data/
 /backups/
 

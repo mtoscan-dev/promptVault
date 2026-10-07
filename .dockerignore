@@ -6,7 +6,6 @@ build
 dist
 
 # Datos Persistentes (Evita que entren a la imagen)
-ollama_data/
 postgres_data/
 backups/*.gz
 
