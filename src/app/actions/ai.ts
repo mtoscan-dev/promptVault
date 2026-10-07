@@ -20,7 +20,6 @@ const llmProvider = createOpenAI({
 // The bare call defaults to OpenAI's Responses API (/v1/responses), which freeLLMAPI accepts
 // but doesn't honor for structured output — generateObject calls silently get back prose
 // instead of JSON and fail to parse. Chat Completions (/v1/chat/completions) works correctly.
-
 export async function translatePromptFields(
   data: { title: string; description: string; content: string },
   targetLang: "es" | "en",
